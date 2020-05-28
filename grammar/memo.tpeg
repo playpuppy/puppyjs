@@ -1,0 +1,26 @@
+//
+
+X+Y XにYを足す
+print(X) Xを表示する
+print(X,Y) XとYを表示する 
+
+Y=X XをYとする　
+X=input() 入力された[値|結果]をXとする
+X=int(input()) 入力された整数をXとする 
+
+input() 入力された[値|結果]
+int(X) Xを整数にする
+int(X) Xを整数に変換する
+
+X.sort() Xを整列する
+X.sort() Xをソートする
+
+// 入力された文字列を分割し、a,b,cとする
+// a,b,c = input().split()
+
+// 入力された文字列を分割し、それぞれを整数に変換し、a,b,cとする
+// a,b,c = map(int, input().split())
+
+// aを整列する
+// aを逆順で整列する
+

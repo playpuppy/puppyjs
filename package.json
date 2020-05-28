@@ -1,0 +1,56 @@
+{
+  "name": "@playpuppy/puppyjs",
+  "version": "0.1.0",
+  "description": "Puppy Trans-Compiler",
+  "main": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "test": "jest --detectOpenHandles"
+  },
+  "keywords": [
+    "pegtree",
+    "puppy",
+    "peg"
+  ],
+  "bin": {
+    "puppy": "build/main.js"
+  },
+  "author": "Kimio Kuramitsu",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^24.9.1",
+    "@types/node": "^12.12.41",
+    "jest": "^25.5.4",
+    "ts-jest": "^25.5.1",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.9.3"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js"
+    ],
+    "transform": {
+      "^.+\\.(ts|tsx)$": "ts-jest"
+    },
+    "globals": {
+      "ts-jest": {
+        "tsConfig": "tsconfig.json"
+      }
+    },
+    "testMatch": [
+      "**/__tests__/*.+(ts|tsx|js)"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/playpuppy/puppyjs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/playpuppy/puppyjs/issues"
+  },
+  "homepage": "https://github.com/playpuppy/puppyjs"
+}
