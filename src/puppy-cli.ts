@@ -18,10 +18,10 @@ return function (${EntryPoint}) {
   }
 }
 
-const newOrigami = () => {
+export const newPuppyCompiler = () => {
   return new Origami(new Language(
-    ['', site_package('node')],
-    ['math', site_package('math')]
+    site_package('node', ''),
+    site_package('math')
   ))
 }
 
@@ -33,7 +33,7 @@ const load = (file: string, isSource = false) => {
     console.log(`failed to read ${error}`)
     return
   }
-  const origami = newOrigami()
+  const origami = newPuppyCompiler()
   const code = origami.compile(source)
   if (isSource) {
     console.log(code.compiled)
@@ -43,8 +43,14 @@ const load = (file: string, isSource = false) => {
   }
 }
 
+export const evaluate = (source: string) => {
+  const origami = newPuppyCompiler()
+  const code = origami.compile(source)
+  return run(code.compiled, code.newContext({}))
+}
+
 const inter = (isSource: boolean) => {
-  const origami = newOrigami()
+  const origami = newPuppyCompiler()
   var rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,

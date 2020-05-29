@@ -1,7 +1,7 @@
 import { ParseTree } from './parser';
 import { Type, TypeEnv, Symbol } from './types';
 import { Code, Language } from './modules';
-import { stringfy, isInfix } from './origami-utils';
+import { stringfy, isInfix } from './utils';
 
 const AnyType = Type.of('any')
 
@@ -16,6 +16,13 @@ export abstract class Generator {
     }
     else {
       this.code = new Code()
+    }
+  }
+
+  public init() {
+    this.code = new Code()
+    if(this.lang) {
+      this.setLanguage(this.lang)
     }
   }
 
@@ -58,6 +65,12 @@ abstract class CodeWriter extends Generator {
       this.indentLevel = 0
     }
     this.buffers = []
+  }
+
+  public init() {
+    super.init()
+    this.buffers = []
+    this.indentLevel = 0
   }
 
   //protected abstract visit(pt: ParseTree): Type
@@ -225,6 +238,15 @@ export class Environment extends CodeWriter {
     }
   }
 
+  public init() {
+    this.env = {}
+    super.init()
+    this.funcBase = new FunctionContext('main', [], AnyType, true)
+    this.typeEnv = new TypeEnv()
+    this.varTypeId = 0
+  }
+
+
   protected getRoot() :Environment {
     return this.parent === undefined ? this : this.parent.getRoot()
   }
@@ -271,6 +293,7 @@ export class Environment extends CodeWriter {
   }
 
   public setSymbol(key: string, symbol: Symbol) {
+    //console.log(`setSymbol ${key}, ${symbol.code}`)
     this.env[key] = symbol;
     return symbol;
   }

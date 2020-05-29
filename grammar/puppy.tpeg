@@ -39,7 +39,7 @@ Statement =
     / WhileStatement
     / ControlStatement 
     / AssignmentStatement
-    / Expression
+    / { Expression #Expression }
 
 Block = {
     @scope(

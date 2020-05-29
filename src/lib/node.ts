@@ -7,6 +7,7 @@ const DefineLibNode: SymbolList = [
   ['print', 'any->void', '$$print([{0}])'],
   ['print', '(any,any)->void', '$$print([{0},{1}])'],
   ['print', '(any,any,any)->void', '$$print([{0},{1},{2}])'],
+  ['print', '(any,any,any,any)->void', '$$print([{0},{1},{2},{3}])'],
   ['input', 'void->string', '$$input'],
   ['input', '(string)->string', '$$input'],
 ]

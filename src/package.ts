@@ -3,16 +3,19 @@ import { LibNode } from "./lib/node";
 import { LibMath } from "./lib/math";
 import { Module } from "./modules";
 
-export const site_package = (name: string) => {
-  if(name === 'python') {
-    return new LibPython()
+export const site_package = (name: string, alias?: string): [string, Module] => {
+  if(alias === undefined) {
+    alias = name
   }
-  if(name === 'math') {
-    return new LibMath()
+  if(name === 'python') {
+    return [alias, new LibPython()]
   }
   if (name === 'node') {
-    return new LibNode()
+    return [alias, new LibNode()]
+  }
+  if(name === 'math') {
+    return [alias, new LibMath()]
   }
   console.log(`undefined package ${name}`)
-  return new Module([]);
+  return [alias, new Module([])]
 }

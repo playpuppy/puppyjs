@@ -2,7 +2,7 @@ import { ParseTree, PuppyParser } from './parser';
 import { Type, Symbol } from './types';
 import { Module, EntryPoint, Language} from './modules';
 import { Environment, FunctionContext } from './generator'
-import { quote, normalToken, stringfy, isInfix } from './origami-utils';
+import { quote, normalToken, stringfy, isInfix } from './utils';
 
 const VoidType = Type.of('void')
 const BoolType = Type.of('bool')
@@ -14,14 +14,13 @@ const AnyType = Type.of('any')
 const InInfix = true
 const Async = { isAsync: true }
 
-
-export class OrigamiJS extends Environment {
+export class JSGenerator extends Environment {
   constructor(parent?: Environment) {
     super(parent)
   }
 
   protected newEnv() {
-    return new OrigamiJS(this)
+    return new JSGenerator(this)
   }
 
   acceptTrue(pt: ParseTree) {
@@ -331,26 +330,28 @@ export class OrigamiJS extends Environment {
     const keyname = name.getToken()
     const key = `${keyname}@${paramSize}`
     var symbol = this.getSymbol(key)
-    if (!symbol) {
-      for (var i = paramSize-1; i >= 0; i -= 1) {
-        const key2 = `${keyname}@${paramSize}`
-        symbol = this.getSymbol(key2)
-        if (symbol && symbol.options && symbol.options.vargType) {
-          const vargType = symbol.options.vargType
-          var p = symbol.type.paramTypes()
-          for(var j = i; j < paramSize; j++) {
-            p = p.concat([vargType])
-          }
-          const retType = Type.newFuncType(Type.newTupleType(...p), 
-            symbol.type.getReturnType())
-          symbol = this.setSymbol(key, new Symbol(retType, 
-            Language.rewriteParamSize(symbol.code, i-1, paramSize-1)))
-          console.log(symbol)
-          return symbol;
+    //console.log(`finding symbol ${key} ${symbol}`)
+    if(symbol) {
+      return symbol;
+    }
+    for (var i = paramSize-1; i >= 0; i -= 1) {
+      const key2 = `${keyname}@${i}`
+      symbol = this.getSymbol(key2)
+      if (symbol && symbol.options && symbol.options.vargType) {
+        const vargType = symbol.options.vargType
+        var p = symbol.type.paramTypes()
+        for(var j = i; j < paramSize; j++) {
+          p = p.concat([vargType])
         }
+        const retType = Type.newFuncType(Type.newTupleType(...p), 
+          symbol.type.getReturnType())
+        symbol = this.setSymbol(key, new Symbol(retType, 
+          Language.rewriteParamSize(symbol.code, i-1, paramSize-1)))
+        //console.log(`generating symbol ${key} ${symbol.code}:: ${symbol.type}`)
+        return symbol;
       }
     }
-    if (!symbol && this.lang) {
+    if (this.lang) {
       const moduleName = this.lang.findModuleFromSymbol(key)
       if (moduleName) {
         this.importAutoModule(moduleName, { keyname })
@@ -362,7 +363,7 @@ export class OrigamiJS extends Environment {
         return symbol
       }
     }
-    return undefined;
+    return symbol;
   }
 
   acceptApplyExpr(pt: ParseTree): Type {
@@ -474,6 +475,12 @@ export class OrigamiJS extends Environment {
     }
     this.pushS('}')
     return ObjectType
+  }
+
+  /* expression */
+
+  acceptExpression(pt: ParseTree) {
+    return this.visit(pt.get2(0, 'expr'));
   }
 
   /* assignment */
@@ -807,7 +814,7 @@ export class OrigamiJS extends Environment {
     this.funcBase.declName(symbol.code)
   }
 
-  pushFunction(body: OrigamiJS, suffix?:string) {
+  pushFunction(body: JSGenerator, suffix?:string) {
     if(suffix) {
       this.push('(')
     }
@@ -964,6 +971,13 @@ export class OrigamiJS extends Environment {
     return VoidType
   }
 
+  acceptTopLevelReturn(pt: ParseTree) {
+    this.pushS('return')
+    this.pushSP()
+    this.pushT(pt.get(0));
+    return VoidType
+  }
+
   // Source
   acceptSource(pt: ParseTree) {
     if (pt.is('Source')) {
@@ -985,12 +999,6 @@ export class OrigamiJS extends Environment {
     return VoidType
   }
   
-  public compile(source: string, parser = PuppyParser) {
-    const pt = parser(source)
-    this.visit(pt)
-    return stringfy(this.buffers)
-  }
-
   acceptSyntaxError(pt: ParseTree) {
     this.perror(pt, 'SyntaxError')
   }

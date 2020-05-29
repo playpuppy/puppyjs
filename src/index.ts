@@ -1,22 +1,23 @@
 import { Parser, ParseTree } from "./puppy-pasm"
 import { PuppyParser } from "./parser"
-import { Stopify } from "./stopify"
+import { Desugar } from "./desugar"
 import { Language, Module, Code } from "./modules"
+import { site_package } from "./package"
 import { Generator, Environment as Compiler } from "./generator"
-import { OrigamiJS } from "./compiler"
-import { site_package} from "./package"
+import { JSGenerator } from "./compiler"
+import { Stopify } from "./stopify"
 
 export { Language, Module, Parser, Compiler, Code, ParseTree, Stopify, site_package}
 
 export class Origami {
   lang: Language
-  gen: Generator
+  generator: Generator
   parsers: Parser[] = []
 
   public constructor(lang: Language, generator?: Generator) {
     this.lang = lang
-    this.gen = generator ? generator : new OrigamiJS()
-    this.gen.setLanguage(this.lang)
+    this.generator = generator ? generator : new JSGenerator()
+    this.generator.setLanguage(this.lang)
   }
 
   public addParser(parser: Parser) {
@@ -37,9 +38,10 @@ export class Origami {
   }
 
   public compile(source: string) {
-    const tree = this.parse(source)
-    return this.gen.generate(tree)
+    var tree = this.parse(source)
+    tree = Desugar.ExpressionToReturn(tree, 'TopLevelReturn')
+    this.generator.init()
+    return this.generator.generate(tree)
   }
-
 }
 

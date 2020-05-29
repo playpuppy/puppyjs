@@ -9,7 +9,15 @@ export const quote = (s: string) => {
   return `'${s}'`
 }
 
+const TOKENS: {[key:string]: string} = {
+  'is': '==',
+  'is not': '!=',
+  '＋': '+', '＊': '+', 
+  '×': '*', '÷': '/',
+}
+
 export const normalToken = (s: string) => {
+  if (s in TOKENS) return TOKENS[s]
   return s
 }
 

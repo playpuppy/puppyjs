@@ -1,6 +1,7 @@
 import { Module, SymbolList, VargNumber} from './../modules';
 
 const DefineLibPython: SymbolList = [
+  // converter
   ['bool', 'any->bool', '$$bool'],
   ['int', 'any->int', '$$int'],
   ['chr', 'int->string', '$$chr'],
@@ -9,10 +10,19 @@ const DefineLibPython: SymbolList = [
   ['repr', 'any->string', '$$repr'],
   ['list', 'any->any[]', '$$list'],
   ['tuple', 'any->any[]', '$$tuple'],
-  ['abs', 'float->float', '$$abs'],
-  ['round', 'float->float', '$$round'],
+
+  // operator
+  ['//', '(int,int)->int', '(({0}/{1})|0)'],
+  ['**', '(int,int)->int', 'Math.pow({0},{1})'],
+  ['==', '(any,any)->bool', '{0}==={1}'],
+  ['!=', '(any,any)->bool', '{0}!=={1}'],
+  ['+::any', '(any,any)->any', '$$__add__'],
+
+  // number 
+  ['abs', 'float->float', 'Math.abs'],
+  ['round', 'float->float', 'Math.round'],
   ['len', 'any->int', '$$len'],
-  ['range', '(int)->int[]', '$$range(1,{0},1)'],
+  ['range', '(int)->int[]', '$$range(0,{0},1)'],
   ['range', '(int,int)->int[]', '$$range({0},{1},1)'],
   ['range', '(int,int,int)->int[]', '$$range'],
   ['sum', '(float[])->float', '$sum'],
@@ -77,9 +87,7 @@ export class LibPython extends Module {
    * @param x 
    */
 
-  public abs(x: number) {
-    return Math.abs(x);
-  }
+  static abs = Math.abs
 
   public all(iterable: boolean[]) {
     for (const element of iterable) {

@@ -107,7 +107,7 @@ export class Language {
   }
 
   static rewriteParamSize = (code: string, oldSize: number, newSize: number) => {
-    if(code.indexOf(`{${oldSize}}`) !== 0) {
+    if(code.indexOf(`{${oldSize}}`) !== -1) {
       console.log(`TODO: ${code}`)
     }
     return code
@@ -191,11 +191,8 @@ export class Code {
   public main: Executable | undefined = undefined
 
   public newContext(cx: any) {
-    console.log(this.modules)
     for (var module of this.modules) {
-      console.log(module)
       module = Object.create(module)
-      console.log(module)
       cx[module.__entryKey__] = module
       module.__context__ = cx
       module.__init__(cx)
