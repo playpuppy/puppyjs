@@ -30,6 +30,12 @@ export class Context {
     }
   }
 
+  public static get(cx: any, key: string) {
+    const safekey = Context.safeSymbol(key)
+    return cx[safekey]
+  }
+
+
   public static apply(cx: any, key: string, ...values: any[]) {
     const safekey = Context.safeSymbol(key)
     if (!cx[safekey]) {
@@ -147,10 +153,17 @@ export class Module {
 
   }
 
-  __raise__(key: string, cmap: number|undefined, options= {}) {
+  __raise__(key: string, cmap: number|undefined, options : any = {}) {
+    options['key'] = key
     if(this.__context__) {
+      if(cmap) {
+        options['source'] = Context.get(this.__context__, 'cmap')[cmap]
+      }
       console.log(key, options)
     }
+    const e: Error = new Error(key);
+    (e as any)['options'] = options
+    throw e;
   }
 
 }

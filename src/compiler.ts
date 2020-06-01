@@ -288,7 +288,7 @@ export class JSGenerator extends Environment {
   }
 
   acceptUnary(pt: ParseTree) {
-    const op = normalToken(pt.getToken('op'))
+    const op = normalToken(pt.getToken('op,name'))
     const symbol = this.getSymbol(`${op}@1`)
     if (symbol) {
       const params = [pt.get('expr')]
@@ -467,7 +467,12 @@ export class JSGenerator extends Environment {
       if(c > 0) {
         this.push(delim)
       }
-      this.push(quote(key))
+      if(key.startsWith('"') && key.endsWith('"') || key.startsWith("'") && key.endsWith("'")) {
+        this.push(key)
+      }
+      else {
+        this.push(quote(key))
+      }
       this.pushS(':')
       this.pushSP()
       this.visit(e.get('value'))
@@ -558,7 +563,7 @@ export class JSGenerator extends Environment {
   acceptIndex(pt: ParseTree) {
     const [base, baseTy] = this.typeCheck(pt.get('recv'))
     const [index, indexTy] = this.typeCheck(pt.get('index'))
-    if (this.hasSymbol('check-index')) {
+    if (this.hasSymbol('check-index') && !this.hasSymbol('fast-index')) {
       const check_index = this.token('check-index')
       this.push(base)
       this.pushP(`[${check_index}(`, [base, index, [this.sourceMap(pt)]], ')]')
@@ -575,8 +580,8 @@ export class JSGenerator extends Environment {
   acceptField(pt: ParseTree) {
     const name = pt.getToken('name');
     const [base, baseTy] = this.typeCheck(pt.get('recv'), ObjectType);
-    if (this.hasSymbol('check-index')) {
-      const check_index = this.token('check-index')
+    if (this.hasSymbol('check-field')) {
+      const check_index = this.token('check-field')
       this.push(base)
       this.pushP(`[${check_index}(`, [base, [`'${name}'`], [this.sourceMap(pt)]], ')]')
     }

@@ -75,7 +75,7 @@ describe('infix', () => {
   })
 })
 
-describe('function', () => {
+describe('built-in', () => {
   test('print("hello")', () => {
     expect(_eval('print("hello")')).toBe(undefined)
   })
@@ -90,23 +90,61 @@ describe('function', () => {
   })
 })
 
-// describe('assignment', () => {
-//   test('x', () => {
-//     expect(tc('x')).toMatch('var x')
-//     expect(tc('x')).toMatch('x')
-//   })
-//   test('x=1', () => {
-//     expect(tc('x=1')).toMatch('var x')
-//     expect(tmin('x=1')).toMatch('x=1')
-//   })
-//   test('x+=1', () => {
-//     expect(tc('x+=1')).toMatch('var x')
-//     expect(tmin('x+=1')).toMatch('x=x+1')
-//   })
-//   test('a,b=1,2', () => {
-//     expect(tc('a,b=1,2')).toMatch('var a,b')
-//     expect(tmin('a,b=1,2')).toMatch('[a,b]=[1,2]')
-//   })
-// })
+describe('variable', () => {
+  test('x', () => {
+    const c = `
+x = 1
+x    
+`
+    expect(_eval(c)).toBe(1)
+  })
+
+  test('x,y', () => {
+    const c = `
+x,y=1,2
+x+y
+`
+    expect(_eval(c)).toBe(3)
+  })
+  test('s[0]', () => {
+    const c = `
+s="abc"
+s[0]
+`
+    expect(_eval(c)).toBe('a')
+  })
+  test('s[0]="z"', () => {
+    const c = `
+s="abc"
+s[0]="z"
+s[0]
+`
+    expect(_eval(c)).toBe('a')
+  })
+  test('d.x', () => {
+    const c = `
+d={"x": 1, "y": 2}
+d.y
+`
+    expect(_eval(c)).toBe(2)
+  })
+  test('d.x=1', () => {
+    const c = `
+d={"x": 1, "y": 2}
+d.y = d.x
+d.y
+`
+    expect(_eval(c)).toBe(1)
+  })
+
+  test('s[-1]', () => {
+    const c = `
+s="abc"
+s[-1]
+`
+    expect(_eval(c)).toBe('c')
+  })
+
+})
 
 

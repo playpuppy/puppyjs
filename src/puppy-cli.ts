@@ -1,6 +1,6 @@
 import * as fs from 'fs'  //fs = require('fs')
 import * as readline from 'readline'
-import { Origami, site_package } from "./index"
+import { TransCompiler, site_package } from "./index"
 import { Language, EntryPoint } from "./modules"
 
 const run = (source: string, context: any) => {
@@ -19,7 +19,7 @@ return function (${EntryPoint}) {
 }
 
 export const newPuppyCompiler = () => {
-  return new Origami(new Language(
+  return new TransCompiler(new Language(
     site_package('node', ''),
     site_package('math')
   ))

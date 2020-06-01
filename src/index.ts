@@ -9,7 +9,7 @@ import { Stopify } from "./stopify"
 
 export { Language, Module, Parser, Compiler, Code, ParseTree, Stopify, site_package}
 
-export class Origami {
+export class TransCompiler {
   lang: Language
   generator: Generator
   parsers: Parser[] = []

@@ -1,6 +1,8 @@
 import { Module, SymbolList, VargNumber} from './../modules';
 
 const DefineLibPython: SymbolList = [
+  // checker
+  ['check-index', 'any', '$$pyindex'],
   // converter
   ['bool', 'any->bool', '$$bool'],
   ['int', 'any->int', '$$int'],
@@ -78,6 +80,43 @@ export class LibPython extends Module {
   public constructor(extra: SymbolList = []) {
     super(DefineLibPython.concat(extra))
   }
+
+  // check-index
+
+  public pyindex(a: any, index: any, cmap: number) {
+    if(typeof index === 'number') {
+      if (a.length) {
+        if(index < 0) {
+          index += a.length
+        }
+        if(0 <= index && index < a.length) {
+          return index | 0;
+        }
+        throw new Error(`IndexError: ${index} < ${a.length}`)
+        this.__raise__('IndexError', cmap)
+      }
+      else {
+        this.__raise__('TypeError', cmap)
+      }
+    }
+    if (typeof index === 'string') {
+      if(a[index]) {
+        return index;
+      }
+    }
+    return index;
+  }
+
+  public check_range(i: number, max: number, step: number) {
+    if (step > 0) {
+      return i < max;
+    }
+    if (step < 0) {
+      return i > max;
+    }
+    return false;
+  }
+
 
   /* built-in functions  */
 
