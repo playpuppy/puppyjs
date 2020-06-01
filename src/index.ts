@@ -10,14 +10,16 @@ import { Stopify } from "./stopify"
 export { Language, Module, Parser, Compiler, Code, ParseTree, Stopify, site_package}
 
 export class TransCompiler {
-  lang: Language
   generator: Generator
   parsers: Parser[] = []
 
-  public constructor(lang: Language, generator?: Generator) {
-    this.lang = lang
+  public constructor(generator?: Generator) {
     this.generator = generator ? generator : new JSGenerator()
-    this.generator.setLanguage(this.lang)
+    this.generator.setLanguage(new Language())
+  }
+
+  public install(name: string, module: Module) {
+    this.generator.installModule(name, module)
   }
 
   public addParser(parser: Parser) {

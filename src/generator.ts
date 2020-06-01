@@ -1,6 +1,6 @@
 import { ParseTree } from './parser';
 import { Type, TypeEnv, Symbol } from './types';
-import { Code, Language } from './modules';
+import { Code, Language, Module } from './modules';
 import { stringfy, isInfix } from './utils';
 
 const AnyType = Type.of('any')
@@ -19,20 +19,23 @@ export abstract class Generator {
     }
   }
 
+  public setLanguage(lang: Language) {
+    this.lang = lang
+  }
+
+  public installModule(name: string, module: Module) {
+    this.lang?.installModule(name, module)
+  }
+
   public init() {
     this.code = new Code()
     if(this.lang) {
-      this.setLanguage(this.lang)
-    }
-  }
-
-  public setLanguage(lang: Language) {
-    this.lang = lang
-    this.code.modules = lang.initDefaultModules()
-    for(const module of this.code.modules) {
-      for(const s of module.__symbols__) {
-        const [key, type, code, options] = s
-        this.define(key, type, Language.rewriteNameSpace(module.__entryKey__, code), options)
+      this.code.modules = this.lang.initDefaultModules()
+      for (const module of this.code.modules) {
+        for (const s of module.__symbols__) {
+          const [key, type, code, options] = s
+          this.define(key, type, Language.rewriteNameSpace(module.__entryKey__, code), options)
+        }
       }
     }
   }

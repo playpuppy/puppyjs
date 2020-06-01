@@ -71,17 +71,21 @@ export class Language {
 
   public constructor(...defs: [string, Module][]) {
     for(const def of defs) {
-      var [name, module] = def
-      module = Object.create(module)
-      module.__entryKey__ = `$${name}${this.uniqueModuleId++}`
-      if(name === '') {
-        this.defaultModules.push(module)
-      }
-      else{
-        this.installedModules[name] = module
-        this.names.push(name)
-      }      
+      const [name, module] = def
+      this.installModule(name, module)
     }
+  }
+
+  public installModule(name: string, module: Module) {
+    module = Object.create(module)
+    module.__entryKey__ = `$${name}${this.uniqueModuleId++}`
+    if (name === '') {
+      this.defaultModules.push(module)
+    }
+    else {
+      this.installedModules[name] = module
+      this.names.push(name)
+    }      
   }
 
   public initDefaultModules() {

@@ -2,15 +2,15 @@ import { Module, SymbolList, EntryPoint } from '../modules'
 import { Stopify } from '../stopify'
 //import * as fs from 'fs'
 
-const DefineContinuation: SymbolList = [
+const DefineAsync: SymbolList = [
   ['$', 'void', `${EntryPoint}['{0}']`],
   ['yield-async', 'void', 'yield'],
   ['check-sync', 'any', '$$sync'],
 ]
 
-export class LibContinuation extends Module {
+export class LibAsync extends Module {
   public constructor() {
-    super(DefineContinuation)
+    super(DefineAsync)
   }
 
   public sync(result: any) {

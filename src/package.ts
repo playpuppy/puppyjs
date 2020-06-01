@@ -1,21 +1,16 @@
+import { Module } from "./modules";
 import { LibPython } from "./lib/python";
 import { LibNode } from "./lib/node";
 import { LibMath } from "./lib/math";
-import { Module } from "./modules";
+import { LibAsync } from "./lib/runtime";
 
-export const site_package = (name: string, alias?: string): [string, Module] => {
-  if(alias === undefined) {
-    alias = name
-  }
-  if(name === 'python') {
-    return [alias, new LibPython()]
-  }
-  if (name === 'node') {
-    return [alias, new LibNode()]
-  }
-  if(name === 'math') {
-    return [alias, new LibMath()]
+export const site_package = (name: string): Module => {
+  switch(name) {
+    case 'python': return new LibPython()
+    case 'node': return new LibNode()
+    case 'math': return new LibMath()
+    case 'asSync': return new LibAsync()
   }
   console.log(`undefined package ${name}`)
-  return [alias, new Module([])]
+  return new Module([])
 }

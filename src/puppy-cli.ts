@@ -1,7 +1,21 @@
 import * as fs from 'fs'  //fs = require('fs')
 import * as readline from 'readline'
-import { TransCompiler, site_package } from "./index"
+import { TransCompiler, site_package, Stopify } from "./index"
 import { Language, EntryPoint } from "./modules"
+
+const generate = (source: string) => {
+  const main = `
+return function (${EntryPoint}) {
+  ${source}
+}
+`
+  try {
+    return (new Function(main))()
+  }
+  catch (e) {
+    return e;
+  }
+}
 
 const run = (source: string, context: any) => {
   const main = `
@@ -19,10 +33,10 @@ return function (${EntryPoint}) {
 }
 
 export const newPuppyCompiler = () => {
-  return new TransCompiler(new Language(
-    site_package('node', ''),
-    site_package('math')
-  ))
+  const tc = new TransCompiler();
+  tc.install('', site_package('node'))
+  tc.install('math', site_package('math'))
+  return tc
 }
 
 const load = (file: string, isSource = false) => {
@@ -83,5 +97,49 @@ export const main = (args: string[]) => {
   }
   if (!hasFile) {
     inter(isSource)
+  }
+}
+
+type JudgeData = {
+  name: string
+  timeOut?: number
+  input: any[]
+  output: any
+}
+
+const judgeData: JudgeData = {
+  name: 'gcd',
+  input: [10, 7],
+  output: 10,
+}
+
+type JudgeStatus = {
+  serial: number
+  name: string
+  input: any[]
+  output: any
+  result: any
+  elapsed: number
+}
+
+export const judge = (source: string, data: JudgeData[]) => {
+  const tc = new TransCompiler()
+  const code = tc.compile(source)
+  const vars = code.newContext({})
+  run(code.compiled, vars)
+  if(main instanceof Error) {
+
+  }
+  for(var i = 0; i < data.length; i+=1) {
+    const d = data[i]
+    if(vars[d.name]) {
+      const startTime = Date.now()
+      var result = vars[d.name](...d.input)
+      if(result && result.next) {
+        const stopify = new Stopify(result)
+        stopify.setTimeOut(d.timeOut || 5000)
+        stopify.start()
+      }
+    }
   }
 }
