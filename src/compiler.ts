@@ -12,7 +12,6 @@ const StrType = Type.of('str')
 const ObjectType = Type.of('object')
 const AnyType = Type.of('any')
 const InInfix = true
-const Async = { isAsync: true }
 
 export class JSGenerator extends Environment {
   constructor(parent?: Environment) {
@@ -371,6 +370,9 @@ export class JSGenerator extends Environment {
     const [params, options] = this.splitArguments(pt.get('params'))
     const symbol = this.findSymbol(pt.get('name'), params.length)
     if (symbol) {
+      if(symbol.options && symbol.options.isAsync) {
+        this.funcBase.foundAsync = this.hasSymbol('yield-async');
+      }
       return this.emitSymbolExpr(pt, symbol, params, options)
     }
     // symbol = this.getSymbol(name);
@@ -593,16 +595,18 @@ export class JSGenerator extends Environment {
   }
 
   pushYield(pt: ParseTree) {
-    if (this.inGlobal() && this.hasSymbol('yield-time')) {
+    if (this.inGlobal() && this.hasSymbol('yield-timing')) {
       const pos = pt.getPosition()
       const rowTime = pos.row * 1000 + 100
       this.pushIndent()
       this.push(`yield ${rowTime}`)
+      this.pushEOS()
       return;
     }
-    if(this.hasSymbol('yield-async') && pt.is('WhileStmt')) {
+    if (pt.is('While') && this.hasSymbol('yield-async')) {
       this.pushIndent()
       this.push(`if (Math.random() < 0.01) yield 0`)
+      this.pushEOS()
     }
   }
 
@@ -789,6 +793,10 @@ export class JSGenerator extends Environment {
     return VoidType
   }
 
+  acceptPass(pt: ParseTree) {
+    return VoidType
+  }
+
   /* Function Decl */
 
   protected newFunctionContext(parent: ParseTree, name: string = '') {
@@ -823,7 +831,7 @@ export class JSGenerator extends Environment {
     if(suffix) {
       this.push('(')
     }
-    if (this.funcBase.foundAsync) {
+    if (body.funcBase.foundAsync) {
       this.pushS('function*');
       this.pushP('(', body.funcBase.params, ')')
       this.pushSP()
@@ -838,6 +846,20 @@ export class JSGenerator extends Environment {
     }
   }
 
+  pushSyncFunc(name: string, gname: string, body: JSGenerator) {
+    this.pushIndent()
+    this.push(`var ${name}=`)
+    if (body.funcBase.foundAsync) {
+      this.pushP('(', body.funcBase.params, ')')
+      this.push(`=>${this.token('check-sync')}`)
+      this.pushP(`(${gname}(`, body.funcBase.params, '))')
+    }
+    else{
+      this.push(gname)
+    }
+    this.pushEOS()
+  }
+
   acceptFuncDecl(pt: ParseTree) {
     const name = pt.getToken('name')
     const lenv = this.newFunctionContext(pt, name)
@@ -845,28 +867,21 @@ export class JSGenerator extends Environment {
       lenv.addParameter(p.get('name'))
     }
     const funcBase = lenv.funcBase
-    lenv.setSymbol(name, funcBase.definedSymbol(this.safeName(name), Async))
+    const key = `${name}@${funcBase.params.length}`
+    const lsymbol = funcBase.definedSymbol(this.safeName(name), Symbol.Async);
+    lenv.setSymbol(name, lsymbol)
+    lenv.setSymbol(key, lsymbol)
     lenv.visit(this.makeBlock(pt.get('body'), pt))
-    const defun = lenv.funcBase.definedSymbol(this.safeName(name))
-    this.defineSymbol(name, defun, pt)
-    //
+    const defun = funcBase.definedSymbol(this.safeName(name))
+    //this.defineSymbol(name, defun, pt)
+    this.defineSymbol(key, defun, pt)
     this.pushLet(defun)
     this.pushFunction(lenv)
-    // if(defun.code.startsWith('$')) {
-    //   this.pushLF()
-    //   this.pushIndent()
-    //   this.push(`var ${name} = `)
-    //   this.pushP('(', funcBase.params, ')')
-    //   this.push(' => ');
-    //   if (funcBase.foundAsync) {
-    //     this.pushP(`${EntryPoint}.$__sync__(${defun.format()}(`, funcBase.params, '))')      
-    //   }
-    //   else{
-    //     this.pushP(`${defun.format()}(`, funcBase.params, ')')      
-    //   }
-    // }
+    if (this.hasSymbol('yield-async') && this.hasSymbol('$')) {
+      this.pushSyncFunc(name, defun.code, lenv)
+    }
     //console.log(`DEFINED ${name} :: ${defun.type}`)
-    return VoidType;
+    return VoidType
   }
 
   acceptFuncExpr(pt: ParseTree) {
@@ -993,7 +1008,7 @@ export class JSGenerator extends Environment {
       if(parent.is('FuncDecl')) {
         this.pushIndent('//@names')
       }
-      this.pushYield(pt.get('parent'))
+      this.pushYield(parent)
     }
     for (const stmt of pt.subNodes()) {
       this.pushYield(stmt)

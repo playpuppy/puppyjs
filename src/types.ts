@@ -605,5 +605,9 @@ export class Symbol {
     }
     return this.code + '(' + params.join(',') + ')'
   }
+
+  // options 
+  public static Async = { isAsync: true }
+
 }
 

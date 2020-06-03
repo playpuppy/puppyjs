@@ -1,7 +1,7 @@
 import * as fs from 'fs'  //fs = require('fs')
 import * as readline from 'readline'
 import { TransCompiler, site_package, Stopify } from "./index"
-import { Language, EntryPoint } from "./modules"
+import { Language, EntryPoint, Context } from "./modules"
 
 const generate = (source: string) => {
   const main = `
@@ -27,6 +27,8 @@ return function (${EntryPoint}) {
     return (new Function(main))()(context)
   }
   catch (e) {
+    Context.set(context, 'main', source)
+    Context.set(context, 'e', e)
     console.log(main);
     console.log(e);
   }
@@ -100,46 +102,111 @@ export const main = (args: string[]) => {
   }
 }
 
+/* online judge */
+
+const match = (a: any, b: any) => {
+  if (a === b) {
+    return true
+  }
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length === b.length) {
+      for (var i = 0; i < a.length; i++) {
+        if(!match(a[i],b[i])) {
+          return false
+        }
+      }
+      return true
+    }
+  }
+  if(typeof a === 'object' && typeof b === 'object') {
+    for(const key of Object.keys(a)) {
+      if(!match(a[key], b[key])) {
+        return false
+      }
+    }
+    return true
+  }
+  return false
+}
+
 type JudgeData = {
   name: string
   timeOut?: number
   input: any[]
   output: any
-}
-
-const judgeData: JudgeData = {
-  name: 'gcd',
-  input: [10, 7],
-  output: 10,
-}
-
-type JudgeStatus = {
-  serial: number
-  name: string
-  input: any[]
-  output: any
-  result: any
   elapsed: number
+  status: string
+  result: any
 }
 
-export const judge = (source: string, data: JudgeData[]) => {
-  const tc = new TransCompiler()
-  const code = tc.compile(source)
-  const vars = code.newContext({})
-  run(code.compiled, vars)
-  if(main instanceof Error) {
+export class OnlineJudge {
+  tc: TransCompiler
 
+  public constructor() {
+    this.tc = newPuppyCompiler()
+    this.tc.install('', site_package('async'))
   }
-  for(var i = 0; i < data.length; i+=1) {
-    const d = data[i]
-    if(vars[d.name]) {
-      const startTime = Date.now()
-      var result = vars[d.name](...d.input)
-      if(result && result.next) {
-        const stopify = new Stopify(result)
-        stopify.setTimeOut(d.timeOut || 5000)
-        stopify.start()
-      }
+
+  public createContext(source: string) {
+    const code = this.tc.compile(source)
+    console.log(code.compiled)
+    const cx = code.newContext({})
+    run(code.compiled, cx)
+    return cx
+  }
+  
+  judged = (cx: any, d: JudgeData) => {
+    console.log(d)
+  } 
+
+  public judge(cx: any, d: JudgeData) {
+    if (Context.get(cx, 'e')) {
+      d.status = 'FE'
+      return false
+    }
+    if (!cx[d.name]) {
+      d.status = 'NE';
+      return false
+    }
+    const startTime = Date.now()
+    var result = cx[d.name](...d.input)
+    if (result && result.next) {
+      const stopify = new Stopify(result)
+      stopify.setTimeOut(d.timeOut || 5000)
+      stopify.start((ret) => {
+        d.elapsed = Date.now() - startTime
+        d.status = match(d.output, ret) ? 'AC' : 'WA'
+        d.result = ret
+        this.judged(cx, d)
+      })
+    }
+    else {
+      d.elapsed = Date.now() - startTime
+      d.status = match(d.output, result) ? 'AC' : 'WA'
+      d.result = result
+      this.judged(cx, d)
     }
   }
 }
+
+const testGcd = `
+def gcd(a,b):
+  if b == 0: return a
+  return gcd(b, a%b)
+`
+
+const dataGcd: JudgeData = {
+      name: 'gcd',
+      input: [1071,1029],
+      output: 21,
+      status: '',
+      elapsed: -1,
+      result: undefined,
+}
+
+
+export const testJudge = () => {
+  const oj = new OnlineJudge()
+  const cx = oj.createContext(testGcd)
+  oj.judge(cx, dataGcd)
+} 

@@ -213,6 +213,12 @@ export class FunctionContext {
   }
 
   definedSymbol(name: string, options?: any) {
+    if(options) {
+      return new Symbol(this.definedFuncType(), name, options)
+    }
+    if(this.foundAsync) {
+      return new Symbol(this.definedFuncType(), name, Symbol.Async)
+    }
     return new Symbol(this.definedFuncType(), name)
   }
 

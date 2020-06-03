@@ -19,6 +19,5 @@ export class LibAsync extends Module {
     }
     return result
   }
-
 }
 

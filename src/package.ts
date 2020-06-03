@@ -9,7 +9,7 @@ export const site_package = (name: string): Module => {
     case 'python': return new LibPython()
     case 'node': return new LibNode()
     case 'math': return new LibMath()
-    case 'asSync': return new LibAsync()
+    case 'async': return new LibAsync()
   }
   console.log(`undefined package ${name}`)
   return new Module([])

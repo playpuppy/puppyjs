@@ -1,40 +1,17 @@
-test(`dummpy`, () => {
-  expect(1).toBe(1)
+import { testJudge } from '../src/puppy-cli'
+
+test(`main`, async () => {
+  testJudge()
+  await expect(1).toBe(1)
 })
 
-
-// import { Origami, p, t, tmin, Type } from '../src/testcommons'
-// import { EntryPoint } from '../src/modules';
-
-// const TyInt = Type.of('int')
-
-// const hello = `
-// print("hello")
-// `
-// test(`hello`, () => {
-//   const env = new Origami();
-//   const code = env.stringfy(p(hello))
-//   //console.log(code)
-//   expect(code).toStrictEqual('print("hello")')
-// })
-
-// test(`hello_defined`, () => {
-//   const env = new Origami();
-//   env.define('print', '(any)->void', 'console.log({0})')
-//   const code = env.stringfy(p(hello))
-//   //console.log(code)
-//   expect(code).toStrictEqual('console.log("hello")')
-// })
-
-// const hello_color = `
-// print("hello", color="red")
-// `
-// test(`hello_color`, () => {
-//   const env = new Origami();
-//   const code = env.stringfy(p(hello_color))
-//   //console.log(code)
-//   expect(t(code)).toStrictEqual(`print("hello",{'color':"red",})`)
-// })
+it('has working hooks', done => {
+  setTimeout(() => {
+    console.log("Why don't I run?")
+    expect(true).toBe(true)
+    done()
+  }, 5000)
+})
 
 // test(`hello_defined_color`, () => {
 //   const env = new Origami();
