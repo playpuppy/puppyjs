@@ -1,7 +1,7 @@
-import { Module, SymbolList } from './../modules'
+import { Module, APIs } from './../modules'
 //import * as math from 'mathjs'
 
-const DefineLibPython: SymbolList = [
+const DefineMath: APIs = [
   ['abs', 'float->float', 'Math.abs'],
   ['acos', 'float->float', 'Math.acos'],
   ['acosh', 'float->float', 'Math.acosh'],
@@ -56,7 +56,7 @@ const DefineLibPython: SymbolList = [
 
 export class LibMath extends Module {
   public constructor() {
-    super(DefineLibPython)
+    super('math', DefineMath)
   }
 
   static abs = Math.abs;

@@ -1,8 +1,7 @@
 import { newPuppyCompiler } from '../src/puppy-cli'
-import { site_package } from '../src'
 
 const puppyjs = newPuppyCompiler()
-puppyjs.install('', site_package('async'))
+puppyjs.install('async', '')
 
 const tc = (s: string) => {
   const c = puppyjs.compile(s)

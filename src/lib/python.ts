@@ -1,6 +1,6 @@
-import { Module, SymbolList, VargNumber} from './../modules';
+import { Module, APIs, VargNumber} from './../modules';
 
-const DefineLibPython: SymbolList = [
+const DefineLibPython: APIs = [
   // checker
   ['check-index', 'any', '$$pyindex'],
   // converter
@@ -77,8 +77,8 @@ const rangeDec = function* (start: number, end: number, step: number) {
 }
 
 export class LibPython extends Module {
-  public constructor(extra: SymbolList = []) {
-    super(DefineLibPython.concat(extra))
+  public constructor(extra: APIs = []) {
+    super('python3', DefineLibPython.concat(extra))
   }
 
   // check-index

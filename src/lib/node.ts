@@ -1,8 +1,12 @@
-import { SymbolList } from './../modules'
+import { APIs } from './../modules'
 import {LibPython} from './python'
 import * as fs from 'fs'
 
-const DefineLibNode: SymbolList = [
+const defaultPrintOptions: any = {
+  'sep': ' ', 'end': '\n'
+}
+
+const DefineNode: APIs = [
   ['print', 'void->void', '$$print([])'],
   ['print', 'any->void', '$$print([{0}])'],
   ['print', '(any,any)->void', '$$print([{0},{1}])'],
@@ -12,13 +16,10 @@ const DefineLibNode: SymbolList = [
   ['input', '(string)->string', '$$input'],
 ]
 
-const defaultPrintOptions: any = {
-  'sep': ' ', 'end': '\n'
-}
 
 export class LibNode extends LibPython {
   public constructor() {
-    super(DefineLibNode)
+    super(DefineNode)
   }
 
   print(xs: any[], options = defaultPrintOptions) {

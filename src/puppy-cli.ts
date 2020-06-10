@@ -27,8 +27,8 @@ return function (${EntryPoint}) {
     return (new Function(main))()(context)
   }
   catch (e) {
-    Context.set(context, 'main', source)
-    Context.set(context, 'e', e)
+    context.main = source
+    context.e = e
     console.log(main);
     console.log(e);
   }
@@ -36,8 +36,8 @@ return function (${EntryPoint}) {
 
 export const newPuppyCompiler = () => {
   const tc = new TransCompiler();
-  tc.install('', site_package('node'))
-  tc.install('math', site_package('math'))
+  tc.install('node', '')
+  tc.install('math')
   return tc
 }
 
@@ -55,14 +55,14 @@ const load = (file: string, isSource = false) => {
     console.log(code.compiled)
   }
   else {
-    run(code.compiled, code.newContext({}))
+    run(code.compiled, code.newContext())
   }
 }
 
 export const evaluate = (source: string) => {
   const origami = newPuppyCompiler()
   const code = origami.compile(source)
-  return run(code.compiled, code.newContext({}))
+  return run(code.compiled, code.newContext())
 }
 
 const inter = (isSource: boolean) => {
@@ -78,7 +78,7 @@ const inter = (isSource: boolean) => {
       console.log(code.compiled)
     }
     else {
-      context = code.newContext(context)
+      context = code.newContext() // FIXME
       run(code.compiled, context)
     }
     rl.close()
@@ -144,13 +144,13 @@ export class OnlineJudge {
 
   public constructor() {
     this.tc = newPuppyCompiler()
-    this.tc.install('', site_package('async'))
+    this.tc.install('async', '')
   }
 
   public createContext(source: string) {
     const code = this.tc.compile(source)
     console.log(code.compiled)
-    const cx = code.newContext({})
+    const cx = code.newContext()
     run(code.compiled, cx)
     return cx
   }
@@ -160,25 +160,26 @@ export class OnlineJudge {
   } 
 
   public judge(cx: any, d: JudgeData) {
-    if (Context.get(cx, 'e')) {
+    if (cx.e) {
       d.status = 'FE'
       return false
     }
-    if (!cx[d.name]) {
+    if (cx.vars[d.name]) {
       d.status = 'NE';
       return false
     }
     const startTime = Date.now()
-    var result = cx[d.name](...d.input)
+    var result = cx.vars[d.name](...d.input)
     if (result && result.next) {
       const stopify = new Stopify(result)
       stopify.setTimeOut(d.timeOut || 5000)
-      stopify.start((ret) => {
-        d.elapsed = Date.now() - startTime
-        d.status = match(d.output, ret) ? 'AC' : 'WA'
-        d.result = ret
-        this.judged(cx, d)
-      })
+      stopify.start()
+      // stopify.start((ret) => {
+      //   d.elapsed = Date.now() - startTime
+      //   d.status = match(d.output, ret) ? 'AC' : 'WA'
+      //   d.result = ret
+      //   this.judged(cx, d)
+      // })
     }
     else {
       d.elapsed = Date.now() - startTime

@@ -1,4 +1,4 @@
-
+import { EventSubscription } from './event'
 
 const HelloWorld = function*(vars: any) {
   console.log('Hello')
@@ -16,22 +16,22 @@ export class Stopify {
   private autoPause = false
   private timeScale = 1.0
   private timeOut = 0
-  private trackingLine = (line: number) => { }
-  private endingEvent = (ret: any) => {  }
+  private events: EventSubscription | undefined
+  private options: any
 
-  public constructor(runtime: IterableIterator<any>) {
-    this.runtimeStack = [runtime];
+  public constructor(runtime: IterableIterator<any>, events?: EventSubscription, options?: any) {
+    this.runtimeStack = [runtime]
+    this.events = events
+    this.options = options
   }
 
   public syncExec() {
-    //this.runtimeStack = [runtime];
     while (this.runtimeStack.length > 0) {
       const runtime = this.runtimeStack[this.runtimeStack.length - 1];
       const res = runtime.next(this.retval);
       if (res.done) {
         this.retval = res.value;
         this.runtimeStack.pop(); // FIXME
-        //console.log(`returing ${this.retval}`);
       }
       else {
         this.retval = undefined;
@@ -56,20 +56,14 @@ export class Stopify {
     this.timeScale = timeScale;
   }
 
-  public setLineTracer(lineTracer: (line: number) => void) {
-    this.trackingLine = lineTracer
-  }
-
-  // runtime: IterableIterator<any>, 
-  public start(ending = (ret: any) => { } ) {
+  public start() {
     if(!this.cps) {
       clearTimeout(this.cps);
       this.cps = undefined;
     }
     //this.runtimeStack = [runtime];
     this.paused = false;
-    this.endingEvent = ending;
-    if(this.timeOut > 1000) {
+    if(this.timeOut > 100) {
       setTimeout(() => { this.timeOut = -1 }, this.timeOut);
     }
     this.stepExec();
@@ -77,7 +71,9 @@ export class Stopify {
 
   stepExec() {
     if (this.runtimeStack.length === 0) {
-      this.endingEvent(this.retval)
+      if(this.events) {
+        this.events.dispatch('ending', { result: this.retval, options: this.options})
+      }
       return
     }
     if (this.paused === true) {
@@ -96,7 +92,9 @@ export class Stopify {
       this.runtimeStack.pop(); // FIXME
       //console.log(`returing ${this.retval}`);
       if (this.runtimeStack.length === 0) {
-        this.endingEvent(res.value)
+        if (this.events) {
+          this.events.dispatch('ending', { result: this.retval, options: this.options })
+        }
         return
       }
     }
@@ -105,8 +103,8 @@ export class Stopify {
       //console.log(`yielding ${v}`);
       if (typeof res.value === 'number') {
         time = res.value % 1000;
-        if (time !== 0) {
-          this.trackingLine(res.value / 1000)
+        if (time !== 0 && this.events) {
+          this.events.dispatch('lineTrack', res.value / 1000)
         }
       }
       else {
@@ -119,7 +117,9 @@ export class Stopify {
       this.cps = setTimeout(() => (this.stepExec()), time * this.timeScale);
     }
     else {
-      this.endingEvent(undefined) // timeout
+      if (this.events) {
+        this.events.dispatch('timeOut', { options: this.options })
+      }
     }
   }
 
@@ -141,6 +141,5 @@ export class Stopify {
       this.cps = null
     }
   }
-
 }
 
