@@ -1,14 +1,14 @@
 import { Parser, ParseTree } from "./puppy-pasm"
 import { PuppyParser } from "./parser"
 import { Desugar } from "./desugar"
-import { Language, Module, Code, Context } from "./modules"
+import { Language, APIs, Module, Code, Context } from "./modules"
 import { site_package } from "./lib/package"
 import { Generator, Environment as Compiler } from "./generator"
 import { JSGenerator } from "./compiler"
 import { EventSubscription, EventCallback } from './event'
 import { Stopify } from "./stopify"
 
-export { Language, Module, Parser, Compiler, Code, ParseTree, Stopify, Context, site_package}
+export { Language, Module, Parser, Compiler, Code, ParseTree, Context, APIs}
 
 export class TransCompiler {
   generator: Generator
