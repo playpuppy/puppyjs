@@ -1,6 +1,8 @@
 import * as fs from 'fs'  //fs = require('fs')
 import * as readline from 'readline'
-import { TransCompiler, site_package, Stopify } from "./index"
+import { site_package } from "./lib/package"
+import { Stopify } from "./stopify"
+import { TransCompiler } from "./index"
 import { Language, EntryPoint, Context } from "./modules"
 
 const generate = (source: string) => {

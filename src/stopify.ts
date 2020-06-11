@@ -104,7 +104,7 @@ export class Stopify {
       if (typeof res.value === 'number') {
         time = res.value % 1000;
         if (time !== 0 && this.events) {
-          this.events.dispatch('lineTrack', res.value / 1000)
+          this.events.dispatch('trackLine', res.value / 1000)
         }
       }
       else {
@@ -143,3 +143,9 @@ export class Stopify {
   }
 }
 
+export const syncExec = (result: any) => {
+  if(result.next) {
+    return new Stopify(result).syncExec();
+  }
+  return result;
+}

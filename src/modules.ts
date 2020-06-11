@@ -1,6 +1,7 @@
 import { Type, Symbol } from './types'
 import { ParseTree } from './parser'
 import { EventSubscription } from './event';
+import { syncExec } from './stopify';
 
 export const EntryPoint = '$v';
 
@@ -16,7 +17,7 @@ export const VargAny = {
 
 const NOP = () => { }
 
-type Playable = {
+type Player = {
   start: () => void;
   stop: () => void;
   pause: () => void;
@@ -25,7 +26,7 @@ type Playable = {
 
 export class Context {
   public vars: any = {}
-  public plays: Playable[] = []
+  public players: Player[] = []
   public events: EventSubscription
   public codemap: ParseTree[]
 
@@ -34,29 +35,46 @@ export class Context {
     this.codemap = codemap
   }
 
-  public addPlayable(play: Playable) {
-    this.plays.push(play)
+  addPlayer(play: Player) {
+    this.players.push(play)
   }
 
   public start() {
-    for(const p of this.plays) {
+    for(const p of this.players) {
       p.start()
     }
   }
 
   public pause() {
-    for (const p of this.plays) {
+    for (const p of this.players) {
       p.pause()
     }
   }
+
   public resume() {
-    for (const p of this.plays) {
+    for (const p of this.players) {
       p.resume()
     }
   }
+
   public stop() {
-    for (const p of this.plays) {
+    for (const p of this.players) {
       p.stop()
+    }
+  }
+
+  public ffiCall(name: string, ...args: any[]) {
+    if(this.vars[name]) {
+      try {
+        return syncExec(this.vars[name](...args));
+      }
+      catch(e) {
+        this.events.dispatch('caught', {
+          ffiCall: name,
+          arguments: args,
+          e: e,
+        });
+      }
     }
   }
 }
@@ -163,7 +181,6 @@ export class Module {
       if(cmap) {
         options['source'] = this.__context__.codemap[cmap]
       }
-      console.log(key, options)
     }
     const e: Error = new Error(key);
     (e as any)['options'] = options
@@ -203,6 +220,7 @@ export class Code {
   public modules: Module[] = []
   public codemap: ParseTree[] = []
   public errors: SourceEvent[] = []
+  public source: string=''
   public compiled: string = ''
   public main: Main | undefined = undefined
 

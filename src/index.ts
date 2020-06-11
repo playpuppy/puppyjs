@@ -75,15 +75,29 @@ export class PuppyCanvas {
     this.tc.install(module, name)
   }
 
-  public load(source: string) {
+  public load(source: string) :boolean {
+    if(this.code && this.code.source === source) {
+      return true;
+    }
+    var noErrors = true;
+    this.code = this.tc.compile(source)
+    this.events.dispatch('compiled', this.code);
+    if(this.code.errors) {
+      for(const e of this.code.errors) {
+        if(e.key.endsWith('Error')) {
+          noErrors = false;
+        }
+        this.events.dispatch('error', e);
+      }
+    }
+    return noErrors;
+  }
+
+  public start() {
     if (this.context) {
       this.stop()
       this.context = undefined;
     }
-    this.code = this.tc.compile(source)
-  }
-
-  public start() {
     if (this.code) {
       this.context = this.code.newContext(this.events)
     }
@@ -91,7 +105,7 @@ export class PuppyCanvas {
       const cx = this.context
       const main = this.code.getExecutable()
       const stopify = new Stopify(main(cx), this.events)
-      this.context.addPlayable(stopify)
+      this.context.addPlayer(stopify)
       this.context.start()
     }
   }
@@ -110,7 +124,7 @@ export class PuppyCanvas {
 
   public stop() {
     if (this.context) {
-      this.context.resume()
+      this.context.stop()
       this.context = undefined;
     }
   }
