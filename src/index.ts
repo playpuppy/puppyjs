@@ -54,7 +54,7 @@ export class TransCompiler {
   }
 }
 
-export class PuppyCanvas {
+export class PuppyPlayer {
   tc: TransCompiler
   code: Code | undefined = undefined
   context: Context | undefined;

@@ -1,11 +1,11 @@
-import { PuppyCanvas, site_package } from '../src/index'
+import { PuppyPlayer } from '../src/index'
 
 const source = `
 print('hello,world')
 `
 
 test('puppy', () => {
-  const puppy = new PuppyCanvas()
+  const puppy = new PuppyPlayer()
   puppy.install('node', '')
   puppy.load(source)
   puppy.start()
