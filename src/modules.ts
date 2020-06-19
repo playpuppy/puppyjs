@@ -7,13 +7,29 @@ export const EntryPoint = '$v';
 
 export type APIs = ([string, string, string] | [string, string, string, any])[]
 
-export const VargNumber = {
-  vargType: Type.parseOf('number')
+export class APIOption {
+
+  public static VariableArguments = {
+    vargType: Type.of('any')
+  }
+
+  public static VariableNumberArguments = {
+    vargType: Type.of('number')
+  }
+
+  public static CodeRef = {
+    coderef: true
+  }
+
+  public static hasCodeRef(symbol: Symbol) {
+    return (symbol.options && symbol.options)
+  }
+
 }
 
-export const VargAny = {
-  vargType: Type.parseOf('any')
-}
+
+
+
 
 const NOP = () => { }
 

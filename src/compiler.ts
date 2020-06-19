@@ -1,6 +1,6 @@
 import { ParseTree, PuppyParser } from './parser';
 import { Type, Symbol } from './types';
-import { Module, EntryPoint, Language} from './modules';
+import { Module, EntryPoint, Language, APIOption} from './modules';
 import { Environment, FunctionContext } from './generator'
 import { quote, normalToken, stringfy, isInfix } from './utils';
 
@@ -180,11 +180,13 @@ export class JSGenerator extends Environment {
   acceptVar(pt: ParseTree) {
     const symbol = this.checkSymbol(pt)
     this.pushSymbol(symbol)
+    //console.log(`:: ${symbol.code} ${symbol.type}`)
     return symbol.type
   }
 
   acceptVarDecl(pt: ParseTree) {
     const [right, rightType] = this.typeCheck(pt.get('right'), this.newVarType(pt.get('left')));
+    console.log(`:: vardecl ${pt.get('left')} ${rightType}`)
     const symbol = this.checkSymbol(pt.get('left'), rightType)
     this.pushLet(symbol)
     this.push(right)
@@ -275,16 +277,59 @@ export class JSGenerator extends Environment {
       return this.pushT(this.desugarTrinaryComparator(pt))
     }
     const op = normalToken(pt.getToken('op,name'))
-    const symbol = this.getSymbol(`${op}@2`)
+    const [left, leftTy] = this.typeCheck(pt.get('left'), this.leftType(op))
+    const [right, rightTy] = this.typeCheck(pt.get('right'), this.rightType(op, leftTy))
+    var patTy = leftTy;
+    if(leftTy.isNumberType() || rightTy.isNumberType()) {
+      patTy = IntType;
+    }
+    else if (leftTy.isStringType() || rightTy.isStringType()) {
+      patTy = StrType;
+    }
+    const symbol = this.findMethod(op, 2, patTy);
     if (symbol) {
       const params = [pt.get('left'), pt.get('right')]
       return this.emitSymbolExpr(pt, symbol, params)
     }
-    this.pushT(pt.get('left'), AnyType, InInfix)
+    this.pushT(pt.get('left'), patTy, InInfix)
     this.pushOp(op)
-    this.pushT(pt.get('right'), AnyType, InInfix)
-    return this.untyped();
+    this.pushT(pt.get('right'), patTy, InInfix);
+    return this.infixType(op, patTy);
   }
+
+  findMethod(name: string, paramSize: number, ty = AnyType) {
+    if(!ty.is('any')) {
+      const symbol = this.getSymbol(`${name}::${ty}@${paramSize}`)
+      if(symbol) {
+        return symbol;
+      }
+    }
+    return this.getSymbol(`${name}@${paramSize}`)
+  }
+
+  leftType(op: string) {
+    if (op === '%' || op === '-' || op === '/' || op === '//' || op === '**' 
+      || op === '<<' || op === '>>' || op === '|' || op === '&' || op === '^' ) {
+      return IntType;
+    }
+    return AnyType;
+  }
+
+  rightType(op: string, leftTy: Type) {
+    if (op === '<' || op === '>' || op === '<=' || op === '>=' || op === '==' || op === '!=') {
+      return leftTy;
+    }
+    return this.leftType(op);
+  }
+
+  infixType(op:string, leftTy:Type) {
+    if (op === '<' || op === '>' || op === '<=' || op === '>=' || op === '==' || op === '!=') {
+      return BoolType;
+    }
+    return leftTy;
+  }
+
+  
 
   acceptUnary(pt: ParseTree) {
     const op = normalToken(pt.getToken('op,name'))
@@ -434,6 +479,9 @@ export class JSGenerator extends Environment {
       }
     }
     var code = symbol.format(cs)
+    if (APIOption.hasCodeRef(symbol)) {
+      ;; // todo
+    }
     if(options && code.endsWith(')')) {
       this.push(code.substring(0, code.length-1))
       if(params.length > 0) {
@@ -513,10 +561,6 @@ export class JSGenerator extends Environment {
     return this.visit(assign)
   }
 
-  sourceMap(pt: ParseTree) {
-    return '0'
-  }
-
   intValue(pt: ParseTree): number | undefined {
     if (pt.is('Int')) {
       return Number.parseInt(pt.getToken())
@@ -568,7 +612,7 @@ export class JSGenerator extends Environment {
     if (this.hasSymbol('check-index') && !this.hasSymbol('fast-index')) {
       const check_index = this.token('check-index')
       this.push(base)
-      this.pushP(`[${check_index}(`, [base, index, [this.sourceMap(pt)]], ')]')
+      this.pushP(`[${check_index}(`, [base, index, [this.codeRef(pt)]], ')]')
     }
     else {
       this.push(base)
@@ -585,7 +629,7 @@ export class JSGenerator extends Environment {
     if (this.hasSymbol('check-field')) {
       const check_index = this.token('check-field')
       this.push(base)
-      this.pushP(`[${check_index}(`, [base, [`'${name}'`], [this.sourceMap(pt)]], ')]')
+      this.pushP(`[${check_index}(`, [base, [`'${name}'`], [this.codeRef(pt)]], ')]')
     }
     else {
       this.push(base)

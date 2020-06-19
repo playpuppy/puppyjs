@@ -1,8 +1,9 @@
-import { Module, APIs, VargNumber} from './../modules';
+import { Module, APIs, APIOption} from './../modules';
 
 const DefineLibPython: APIs = [
   // checker
   ['check-index', 'any', '$$pyindex'],
+  ['cknumber', 'int', '$$cknumber', APIOption.CodeRef],
   // converter
   ['bool', 'any->bool', '$$bool'],
   ['int', 'any->int', '$$int'],
@@ -14,11 +15,16 @@ const DefineLibPython: APIs = [
   ['tuple', 'any->any[]', '$$tuple'],
 
   // operator
+  ['+::number', '(int,int)->int', '{0}+{1}'],
+  ['*::number', '(int,int)->int', '{0}*{1}'],
+  ['+::string', '(string,string)->string', '{0}+{1}'],
+  ['*::string', '(string,int)->string', '$$__mul__', APIOption.CodeRef],
   ['//', '(int,int)->int', '(({0}/{1})|0)'],
   ['**', '(int,int)->int', 'Math.pow({0},{1})'],
   ['==', '(any,any)->bool', '{0}==={1}'],
   ['!=', '(any,any)->bool', '{0}!=={1}'],
-  ['+::any', '(any,any)->any', '$$__add__'],
+  ['+', '(any,any)->any', '$$__add__', APIOption.CodeRef],
+  ['*', '(any,any)->any', '$$__mul__', APIOption.CodeRef],
 
   // number 
   ['abs', 'float->float', 'Math.abs'],
@@ -30,8 +36,8 @@ const DefineLibPython: APIs = [
   ['sum', '(float[])->float', '$sum'],
   ['max', '(float[])->float', 'Math.max(...{0})'],
   ['min', '(float[])->float', 'Math.min(...{0})'],
-  ['max', '()->float', 'Math.max', VargNumber],
-  ['min', '()->float', 'Math.min', VargNumber],
+  ['max', '()->float', 'Math.max', APIOption.VariableNumberArguments],
+  ['min', '()->float', 'Math.min', APIOption.VariableNumberArguments],
 
   // list,iterable
   ['filter', '(a->bool,a[])->a[]', '$$filter'],
@@ -76,6 +82,22 @@ const rangeDec = function* (start: number, end: number, step: number) {
   }
 }
 
+const mul_str = (s: string, step: number) => {
+  const ss = [];
+  for(var i = 0; i < step; i+=1) {
+    ss.push(s)
+  }
+  return ss.join('')
+}
+
+const mul_list = (a: any[], step: number) => {
+  const ss = [];
+  for (var i = 0; i < step; i += 1) {
+    ss.push(...a)
+  }
+  return ss;
+}
+
 export class LibPython extends Module {
   public constructor(extra: APIs = []) {
     super('python3', DefineLibPython.concat(extra))
@@ -117,6 +139,60 @@ export class LibPython extends Module {
     return false;
   }
 
+  public cknumber(a: any, coderef: number) {
+    if (typeof a === 'number') {
+      return a
+    }
+    this.__raise__('TypeError', coderef, {request: 'int', value: a});
+    return a
+  }
+
+  public __add__(a: any, b: any, coderef: number) {
+    if (Array.isArray(a) && Array.isArray(b)) {
+      return a.concat(b);
+    }
+    try {
+      if (a.__add__) {
+        return a.__add__(b);
+      }
+      return a+b;
+    }
+    catch(e) {
+      this.__raise__('TypeError', coderef, { 
+        operator: '+', left: a, right: b,
+      })
+    }
+  }
+
+  public __mul__(a: any, b: any, coderef: number) {
+    if (typeof b === 'number') {
+      if (typeof a === 'string') {
+        return mul_str(a, b);
+      }
+      if (Array.isArray(a)) {
+        return mul_list(a,b);
+      }
+    }
+    if (typeof a === 'number') {
+      if(typeof b === 'string') {
+        return mul_str(b, a);
+      }
+      if (Array.isArray(b)) {
+        return mul_list(b, a);
+      }
+    }
+    try {
+      if (a.__mul__) {
+        return a.__mul__(b);
+      }
+      return a * b;
+    }
+    catch(e) {
+      this.__raise__('TypeError', coderef, {
+        operator: '*', left: a, right: b
+      })
+    }
+  }
 
   /* built-in functions  */
 

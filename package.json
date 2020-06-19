@@ -21,11 +21,11 @@
   "license": "MIT",
   "devDependencies": {
     "@types/jest": "^24.9.1",
-    "@types/node": "^12.12.41",
+    "@types/node": "^12.12.47",
     "jest": "^25.5.4",
     "ts-jest": "^25.5.1",
-    "ts-node": "^8.10.1",
-    "typescript": "^3.9.3"
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.5"
   },
   "jest": {
     "moduleFileExtensions": [

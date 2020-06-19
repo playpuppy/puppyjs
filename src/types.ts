@@ -1,6 +1,6 @@
 import { TypeParser, ParseTree } from './parser';
 
-const TypeNames: any = {
+const TypeNames: {[key:string]:string} = {
   'bool': 'boolean',
   'int': 'number',
   'float': 'number',
@@ -9,7 +9,7 @@ const TypeNames: any = {
   'void': '()',
 }
 
-const normalName = (name: string): string => {
+const normalTypeName = (name: string): string => {
   if (name in TypeNames) {
     return TypeNames[name];
   }
@@ -222,7 +222,7 @@ export class Type {
   }
 
   public static newParamType(base: string, ...ts: Type[]) {
-    base = normalName(base);
+    base = normalTypeName(base);
     const key = Type.key(base + '[', ts, ']');
     return Type.memoType(key, () => new ParamType(key, base, ts));
   }
@@ -246,7 +246,12 @@ export class Type {
   }
 
   public static of(s: string) {
-    return TypeMemo[s] || TypeMemo['()'];
+    const ty = TypeMemo[normalTypeName(s)];
+    if(!ty) {
+      console.log(`FIXME Type.of('${s}') is undefined`);
+      return TypeMemo['any'];
+    }
+    return ty;
   }
 
   public static parseOf(s: string) {
@@ -529,7 +534,7 @@ class TypeVisitor {
   }
 
   acceptBaseType(pt: ParseTree) {
-    const uname = normalName(pt.getToken());
+    const uname = normalTypeName(pt.getToken());
     if (!(uname in TypeMemo)) {
       TypeMemo[uname] = new BaseType(uname);
     }

@@ -134,4 +134,5 @@ export class PuppyPlayer {
     //   Context.get(this.context, 'render').resize(width, height)
     // }
   }
+  
 }

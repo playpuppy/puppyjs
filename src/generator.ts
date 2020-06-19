@@ -375,17 +375,31 @@ export class Environment extends CodeWriter {
     if (pat) {
       tenv = tenv || this.typeEnv
       const matched = pat.match(tenv, vat);
-      //console.log(`matched ${pat} ${vat} => ${matched}`)
       if (matched === null) {
         options = options || {}
         options.requestType = pat
         options.resultType = vat
         this.perror(pt, 'TypeError', options);
+        console.log(`type error ${pat} ${vat} @ ${code}`)
         return [code, pat];
       }
       return [code, matched.resolved(tenv)];
     }
     return [code, vat];
+  }
+
+  typeCoercion(pat: Type, code: string[], vat: Type, pt: ParseTree) {
+      if(pat.isNumberType() && !vat.isNumberType() && this.hasSymbol('check-number')) {
+        const symbol = this.getSymbol('check-number')!
+        return [[symbol.format([code.join(''), this.codeRef(pt)])], symbol.type];
+      }
+      return [code, pat]
+  }
+
+  codeRef(pt: ParseTree) {
+    const coderef = this.code.codemap.length;
+    this.code.codemap.push(pt);
+    return `${coderef}`
   }
 
   private prevRow = -1;
