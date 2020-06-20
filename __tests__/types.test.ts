@@ -1,8 +1,16 @@
 import { Type, TypeEnv } from '../src/types';
 
-const testMatch = (tenv: TypeEnv, ty1: Type, ty2: Type) => {
-  const res = ty1.match(tenv, ty2);
-  return res ? `${res.resolved(tenv)}` : `null`;
+const voidTy = Type.of('void')
+const boolTy = Type.of('bool')
+const intTy = Type.of('int')
+const floatTy = Type.of('float')
+const strTy = Type.of('str')
+//const ObjectType = Type.of('object')
+const anyTy = Type.of('any')
+
+const testMatch = (ty1: Type, ty2: Type) => {
+  const res = ty1.match(ty2);
+  return res ? `${res.resolved()}` : `null`;
 }
 
 test(`Type.parseOf`, () => {
@@ -10,100 +18,122 @@ test(`Type.parseOf`, () => {
   const ty2 = Type.parseOf('int')
   const ty3 = Type.parseOf('int->int')
   const ty4 = Type.parseOf('(int,int)')
-  expect(`${ty}`).toStrictEqual('$a|$b');
-  expect(`${ty2}`).toStrictEqual('number');
-  expect(`${ty3}`).toStrictEqual('number->number');
-  expect(`${ty4}`).toStrictEqual('(number,number)');
+  expect(`${ty}`).toBe('$a|$b');
+  expect(`${ty2}`).toBe('number');
+  expect(`${ty3}`).toBe('number->number');
+  expect(`${ty4}`).toBe('(number,number)');
   const ty5 = Type.parseOf('()')
-  expect(`${ty5}`).toStrictEqual('()');
+  expect(`${ty5}`).toBe('()');
   const ty6 = Type.parseOf('(a,a)->a')
-  expect(`${ty6}`).toStrictEqual('($a,$a)->$a');
+  expect(`${ty6}`).toBe('($a,$a)->$a');
   const ty7 = Type.parseOf('()->void')
   //console.log(ty7)
-  expect(`${ty7}`).toStrictEqual('()->()');
+  expect(`${ty7}`).toBe('()->()');
 });
 
-test(`BaseType`, () => {
-  const intTy = Type.parseOf('int')
-  const strTy = Type.parseOf('string')
-  const tenv = new TypeEnv(null);
-  expect(`${intTy}`).toStrictEqual('number');
-  expect(`${strTy}`).toStrictEqual('string');
-  expect(testMatch(tenv, intTy, intTy)).toStrictEqual('number');
-  expect(testMatch(tenv, strTy, strTy)).toStrictEqual('string');
-  expect(testMatch(tenv, intTy, strTy)).toStrictEqual('null');
-  expect(testMatch(tenv, strTy, intTy)).toStrictEqual('null');
+test(`Type.is`, () => {
+  const ty = Type.parseOf('int')
+  const ty2 = Type.parseOf('int->int')
+  const ty3 = Type.parseOf('(int,int)')
+  expect(ty.isNumberType()).toBe(true);
+  expect(ty.is('number')).toBe(true);
 });
 
-// test(`AnyType`, () => {
-//   const anyTy = Type.parseOf('any')
-//   const intTy = Type.parseOf('int')
-//   const tenv = new TypeEnv(null);
-//   expect(anyTy.match(tenv, anyTy)).toStrictEqual(anyTy);
-//   expect(anyTy.match(tenv, intTy)).toStrictEqual(intTy);
-//   expect(intTy.match(tenv, anyTy)).toStrictEqual('null');
-// });
+describe('match', () => {
 
-// test(`ArrayType`, () => {
-//   const strTy = Type.parseOf('str[]')
-//   const intTy = Type.parseOf('Array[int]')
-//   const aTy = Type.parseOf('a[]')
-//   const intintTy = Type.parseOf('Array[int][]')
-//   const tenv = new TypeEnv(null);
-//   expect(`${strTy}`).toStrictEqual('Array[string]');
-//   expect(`${intTy}`).toStrictEqual('Array[number]');
-//   expect(`${intintTy}`).toStrictEqual('Array[Array[number]]');
-//   expect(`${aTy}`).toStrictEqual('Array[a]');
-//   // string[] <: number[]
-//   expect(testMatch(tenv, strTy, intTy)).toStrictEqual('null');
-//   // a[] <: int[]
-//   expect(testMatch(tenv, aTy, intTy)).toStrictEqual('Array[number]');
-//   // a[] <: string[]
-//   expect(testMatch(tenv, aTy, strTy)).toStrictEqual('null');
-// });
+  test(`BaseType`, () => {
+    expect(`${intTy}`).toBe('number');
+    expect(`${strTy}`).toBe('string');
+    expect(testMatch(intTy, intTy)).toBe('number');
+    expect(testMatch(strTy, strTy)).toBe('string');
+    expect(testMatch(intTy, strTy)).toBe('null');
+    expect(testMatch(strTy, intTy)).toBe('null');
+  });
+
+  test(`VoidType`, () => {
+    expect(`${voidTy}`).toBe('()');
+    expect(testMatch(voidTy, intTy)).toBe('()');
+    expect(testMatch(intTy, voidTy)).toBe('null');
+  });
+
+  test(`AnyType`, () => {
+    expect(`${anyTy}`).toBe('any');
+    expect(testMatch(anyTy, anyTy)).toBe('any');
+    expect(testMatch(anyTy, intTy)).toBe('number');
+    //expect(testMatch(intTy, anyTy)).toBe('any');
+  });
+
+  test(`ArrayType`, () => {
+    const strTy = Type.parseOf('str[]')
+    const intTy = Type.parseOf('Array[int]')
+    const aTy = Type.parseOf('a[]')
+    const intintTy = Type.parseOf('Array[int][]')
+    expect(`${strTy}`).toBe('Array[string]');
+    expect(`${intTy}`).toBe('Array[number]');
+    expect(`${intintTy}`).toBe('Array[Array[number]]');
+    expect(`${aTy}`).toBe('Array[$a]');
+    // string[] <: number[]
+    expect(testMatch(strTy, intTy)).toBe('null');
+    // a[] <: int[]
+    expect(testMatch(aTy, intTy)).toBe('Array[number]');
+    // a[] <: string[]
+    expect(testMatch(aTy, strTy)).toBe('null');
+  });
 
 // test(`FuncType`, () => {
 //   const tenv = new TypeEnv(null);
 //   const strTy = Type.parseOf('str->str')
 //   const intTy = Type.parseOf('int->int')
 //   const aTy = Type.parseOf('a->a')
-//   expect(`${strTy}`).toStrictEqual('string->string');
-//   expect(`${intTy}`).toStrictEqual('number->number');
-//   expect(`${aTy}`).toStrictEqual('a->a');
-//   expect(testMatch(tenv, strTy, intTy)).toStrictEqual('null');
-//   expect(testMatch(tenv, aTy, intTy)).toStrictEqual('number->number');
-//   expect(testMatch(tenv, aTy, strTy)).toStrictEqual('null');
+//   expect(`${strTy}`).toBe('string->string');
+//   expect(`${intTy}`).toBe('number->number');
+//   expect(`${aTy}`).toBe('a->a');
+//   expect(testMatch(tenv, strTy, intTy)).toBe('null');
+//   expect(testMatch(tenv, aTy, intTy)).toBe('number->number');
+//   expect(testMatch(tenv, aTy, strTy)).toBe('null');
 // });
+});
 
-// test(`VarType`, () => {
-//   const xTy = Type.newVarType('x', 0);
-//   const yTy = Type.newVarType('y', 1);
-//   const intTy = Type.parseOf('int')
-//   const boolTy = Type.parseOf('bool')
-//   const tenv = new TypeEnv(null);
-//   expect(testMatch(tenv, xTy, intTy)).toStrictEqual('number');
-//   expect(testMatch(tenv, xTy, intTy)).toStrictEqual('number');
-//   expect(testMatch(tenv, xTy, boolTy)).toStrictEqual('null');
-//   expect(testMatch(tenv, intTy, yTy)).toStrictEqual('number');
-//   expect(testMatch(tenv, intTy, yTy)).toStrictEqual('number');
-//   expect(testMatch(tenv, boolTy, yTy)).toStrictEqual('null');
-//   expect(testMatch(tenv, xTy, yTy)).toStrictEqual('number');
-//   expect(testMatch(tenv, yTy, xTy)).toStrictEqual('number');
-//   expect(`${xTy}`).toStrictEqual('number');
-//   expect(`${yTy}`).toStrictEqual('number');
-// });
+describe('VarType', ()=> {
+  test(`VarType/BaseType`, () => {
+    const tenv = new TypeEnv();
+    const xTy = tenv.newVarType('x');
+    const yTy = tenv.newVarType('y');
+    expect(testMatch(xTy, intTy)).toBe('number');
+    expect(testMatch(xTy, intTy)).toBe('number');
+    expect(testMatch(xTy, boolTy)).toBe('null');
+    expect(testMatch(intTy, yTy)).toBe('number');
+    expect(testMatch(intTy, yTy)).toBe('number');
+    expect(testMatch(boolTy, yTy)).toBe('null');
+    expect(testMatch(xTy, yTy)).toBe('number');
+    expect(testMatch(yTy, xTy)).toBe('number');
+    expect(`${xTy}`).toBe('number');
+    expect(`${yTy}`).toBe('number');
+  });
+
+  test(`VarType/VarType`, () => {
+    const tenv = new TypeEnv();
+    const xTy = tenv.newVarType('x');
+    const yTy = tenv.newVarType('y');
+    expect(testMatch(xTy, yTy)).toBe('any');
+    expect(testMatch(yTy, intTy)).toBe('number');
+    expect(testMatch(xTy, intTy)).toBe('number');
+    expect(`${xTy}`).toBe('number');
+    expect(`${yTy}`).toBe('number');
+  });
+});
 
 // test(`VarType x y`, () => {
 //   const xTy = Type.newVarType('x', 0);
 //   const yTy = Type.newVarType('y', 1);
 //   const intTy = Type.parseOf('int')
 //   const tenv = new TypeEnv(null);
-//   expect(testMatch(tenv, xTy, yTy)).toStrictEqual('x#0');
-//   expect(`${xTy}`).toStrictEqual('x#0');
-//   expect(`${yTy}`).toStrictEqual('x#0');
-//   expect(testMatch(tenv, intTy, yTy)).toStrictEqual('number');
-//   expect(`${xTy}`).toStrictEqual('number');
-//   expect(`${yTy}`).toStrictEqual('number');
+//   expect(testMatch(tenv, xTy, yTy)).toBe('x#0');
+//   expect(`${xTy}`).toBe('x#0');
+//   expect(`${yTy}`).toBe('x#0');
+//   expect(testMatch(tenv, intTy, yTy)).toBe('number');
+//   expect(`${xTy}`).toBe('number');
+//   expect(`${yTy}`).toBe('number');
 // });
 
 // test(`VarType x y z`, () => {
@@ -112,13 +142,13 @@ test(`BaseType`, () => {
 //   const zTy = Type.newVarType('z', 2);
 //   const intTy = Type.parseOf('int')
 //   const tenv = new TypeEnv(null);
-//   expect(testMatch(tenv, xTy, zTy)).toStrictEqual('x#0');
-//   expect(testMatch(tenv, yTy, zTy)).toStrictEqual('x#0');
-//   expect(testMatch(tenv, xTy, yTy)).toStrictEqual('x#0');
-//   expect(testMatch(tenv, yTy, intTy)).toStrictEqual('number');
-//   expect(`${xTy}`).toStrictEqual('number');
-//   expect(`${yTy}`).toStrictEqual('number');
-//   expect(`${zTy}`).toStrictEqual('number');
+//   expect(testMatch(tenv, xTy, zTy)).toBe('x#0');
+//   expect(testMatch(tenv, yTy, zTy)).toBe('x#0');
+//   expect(testMatch(tenv, xTy, yTy)).toBe('x#0');
+//   expect(testMatch(tenv, yTy, intTy)).toBe('number');
+//   expect(`${xTy}`).toBe('number');
+//   expect(`${yTy}`).toBe('number');
+//   expect(`${zTy}`).toBe('number');
 // });
 
 // test(`UnionType`, () => {
@@ -126,16 +156,16 @@ test(`BaseType`, () => {
 //   const u2Ty = Type.parseOf('int|str')
 //   const u3Ty = Type.parseOf('int|str|bool')
 //   const u4Ty = Type.parseOf('bool|object')
-//   expect(`${u1Ty}`).toStrictEqual('number');
-//   expect(`${u2Ty}`).toStrictEqual('number|string');
-//   expect(`${u3Ty}`).toStrictEqual('boolean|number|string');
+//   expect(`${u1Ty}`).toBe('number');
+//   expect(`${u2Ty}`).toBe('number|string');
+//   expect(`${u3Ty}`).toBe('boolean|number|string');
 //   const tenv = new TypeEnv(null);
 //   // number|string
-//   expect(testMatch(tenv, u2Ty, u1Ty)).toStrictEqual('number');
-//   expect(testMatch(tenv, u3Ty, u2Ty)).toStrictEqual('number|string');
-//   expect(testMatch(tenv, u2Ty, u4Ty)).toStrictEqual('null');
-//   // expect(testMatch(tenv, u1Ty, u2Ty)).toStrictEqual('number');
-//   // expect(testMatch(tenv, u2Ty, u3Ty)).toStrictEqual('number');
+//   expect(testMatch(tenv, u2Ty, u1Ty)).toBe('number');
+//   expect(testMatch(tenv, u3Ty, u2Ty)).toBe('number|string');
+//   expect(testMatch(tenv, u2Ty, u4Ty)).toBe('null');
+//   // expect(testMatch(tenv, u1Ty, u2Ty)).toBe('number');
+//   // expect(testMatch(tenv, u2Ty, u3Ty)).toBe('number');
 // });
 
 // test(`UnionAlphaType`, () => {
@@ -145,9 +175,9 @@ test(`BaseType`, () => {
 //   const aTy = Type.parseOf('a')
 //   const tenv = new TypeEnv(null);
 //   // number|string
-//   expect(testMatch(tenv, u2Ty, intATy)).toStrictEqual('Array[number]');
-//   expect(testMatch(tenv, aTy, intTy)).toStrictEqual('number');
-//   expect(testMatch(tenv, intTy, aTy)).toStrictEqual('number');
+//   expect(testMatch(tenv, u2Ty, intATy)).toBe('Array[number]');
+//   expect(testMatch(tenv, aTy, intTy)).toBe('number');
+//   expect(testMatch(tenv, intTy, aTy)).toBe('number');
 // });
 
 
@@ -160,12 +190,12 @@ test(`BaseType`, () => {
 
 //   const tenv = new TypeEnv(null);
 //   // number|string
-//   expect(testMatch(tenv, u2Ty, xTy)).toStrictEqual('number|string');
-//   expect(testMatch(tenv, u3Ty, yTy)).toStrictEqual('boolean|number|string');
-//   expect(testMatch(tenv, yTy, xTy)).toStrictEqual('number|string');
-//   expect(`${xTy}`).toStrictEqual('number|string')
-//   expect(`${yTy}`).toStrictEqual('number|string')
-//   expect(testMatch(tenv, intTy, xTy)).toStrictEqual('number');
-//   expect(`${xTy}`).toStrictEqual('number')
-//   expect(`${yTy}`).toStrictEqual('number')
+//   expect(testMatch(tenv, u2Ty, xTy)).toBe('number|string');
+//   expect(testMatch(tenv, u3Ty, yTy)).toBe('boolean|number|string');
+//   expect(testMatch(tenv, yTy, xTy)).toBe('number|string');
+//   expect(`${xTy}`).toBe('number|string')
+//   expect(`${yTy}`).toBe('number|string')
+//   expect(testMatch(tenv, intTy, xTy)).toBe('number');
+//   expect(`${xTy}`).toBe('number')
+//   expect(`${yTy}`).toBe('number')
 // });

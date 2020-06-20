@@ -186,7 +186,7 @@ export class JSGenerator extends Environment {
 
   acceptVarDecl(pt: ParseTree) {
     const [right, rightType] = this.typeCheck(pt.get('right'), this.newVarType(pt.get('left')));
-    console.log(`:: vardecl ${pt.get('left')} ${rightType}`)
+    //console.log(`:: vardecl ${pt.get('left')} ${rightType}`)
     const symbol = this.checkSymbol(pt.get('left'), rightType)
     this.pushLet(symbol)
     this.push(right)
@@ -456,7 +456,7 @@ export class JSGenerator extends Environment {
 
   emitSymbolExpr(pt: ParseTree, symbol: Symbol, params: ParseTree[], options?:ParseTree): Type {
     const paramTypes: Type[] = symbol.type.paramTypes()
-    const retType = symbol.type.getReturnType()
+    var retType = symbol.type.getReturnType()
     const InInfix = '+-*%<>=&|~@!?^'.indexOf(symbol.code[0]) !== -1
     //console.log(`infix ${InInfix} ${symbol.code}`)
     var yieldFlag=false
@@ -467,10 +467,10 @@ export class JSGenerator extends Environment {
         yieldFlag = true
       }
     }
+    this.pushTypeEnv(symbol.type);
     const cs: string[] = []
-    const tenv = this.newTypeEnv();
     for (var i = 0; i < params.length; i++) {
-      const [e,] = this.typeCheck(params[i], paramTypes[i], tenv)
+      const [e,] = this.typeCheck(params[i], paramTypes[i]);
       if(InInfix && isInfix(params[i])) {
         cs.push(`(${stringfy(e)})`)
       }
@@ -478,6 +478,9 @@ export class JSGenerator extends Environment {
         cs.push(stringfy(e))
       }
     }
+    retType = retType.resolved();
+    this.popTypeEnv(symbol.type);
+
     var code = symbol.format(cs)
     if (APIOption.hasCodeRef(symbol)) {
       ;; // todo
@@ -496,7 +499,7 @@ export class JSGenerator extends Environment {
     if (yieldFlag) {
       this.push(')')
     }
-    return retType.resolved(tenv);
+    return retType;
   }
 
   acceptDataArgument(pt: ParseTree) {

@@ -18,103 +18,6 @@ const normalTypeName = (name: string): string => {
 
 /* Type System */
 
-export class TypeEnv {
-  parent: TypeEnv | null;
-  env: any = {}
-  serial = 0;
-  constructor(parent: TypeEnv | null = null) {
-    this.parent = parent;
-    if (parent) {
-      this.serial = parent.serial;
-    }
-  }
-
-  public newVarType(name: string) {
-    this.serial += 1;
-    new VarType(name, this.serial);
-  }
-
-  setDRef(key: string, unified: DRef) {
-    this.env[key] = unified;
-  }
-
-  getDRef(key: string, varType: VarType): DRef {
-    var cur: TypeEnv | null = this;
-    while (cur !== null) {
-      const dref = cur.env[key]
-      if (dref) return dref as DRef;
-      cur = cur.parent;
-    }
-    return this.env[varType.tid] = new DRef(varType);
-  }
-
-}
-
-class DRef {
-  resolved: Type | null = null;
-  parent: VarType;
-
-  constructor(parent: VarType) {
-    this.parent = parent;
-  }
-
-  match(tenv: TypeEnv, ty: Type) {
-    if (ty instanceof VarType) {
-      const dref2: DRef = tenv.getDRef(ty.tid, ty);
-      if (this === dref2) {
-        return this.matchedType();
-      }
-      return this.merge(tenv, dref2);
-    }
-    if (this.resolved === null) {
-      return this.matchedType(ty);
-    }
-    const matched = this.resolved.match(tenv, ty);
-    if (matched !== null) {
-      return this.matchedType(matched);
-    }
-    return matched;
-  }
-
-  matchedType(matched?: Type | undefined) {
-    if (matched) {
-      this.resolved = matched;
-    }
-    if (this.resolved) {
-      if (this.resolved instanceof UnionType) {
-        return this.parent;
-      }
-      return this.resolved;
-    }
-    return null;
-  }
-
-  merge(tenv: TypeEnv, dref2: DRef) {
-    if (dref2.resolved === null || this.resolved === null) {
-      const uinf = this.unify(tenv, dref2)
-      //console.log(`unifying ${uinf.parent}`);
-      return uinf.matchedType();
-    }
-    const matched = this.resolved.match(tenv, dref2.resolved);
-    if (matched !== null) {
-      /* unififaction */
-      const uinf = this.unify(tenv, dref2);
-      return uinf.matchedType(matched);
-    }
-    return matched;
-  }
-
-  unify(tenv: TypeEnv, dref2: DRef): DRef {
-    if (this.parent.serial > dref2.parent.serial) {
-      return dref2.unify(tenv, this);
-    }
-    else {
-      tenv.setDRef(dref2.parent.tid, this);
-      return this;
-    }
-  }
-}
-
 export class Type {
   public tid: string;
   memoed = false;
@@ -133,28 +36,28 @@ export class Type {
     return open + ts.map(x => x.tid).join(',') + close;
   }
 
-  public match(tenv: TypeEnv, ty: Type): Type | null {
-    const ty1 = this.resolved(tenv);
-    const ty2 = ty.resolved(tenv);
+  public match(ty: Type): Type | null {
+    const ty1 = this.resolved();
+    const ty2 = ty.resolved();
     if (ty1.tid === ty2.tid) {
       return ty1;
     }
     if (ty2 instanceof VarType && !(ty1 instanceof VarType)) {
-      return ty2.matchEach(tenv, ty1);
+      return ty2.matchEach(ty1);
     }
-    return ty1.matchEach(tenv, ty2);
+    return ty1.matchEach(ty2);
   }
 
-  matchEach(tenv: TypeEnv, ty: Type): Type | null {
+  matchEach(ty: Type): Type | null {
     return null;
+  }
+
+  resolved(): Type {
+    return this;
   }
 
   containsResolvingType() {
     return this.tid.indexOf('#') !== -1 || this.tid.indexOf('$') !== -1;
-  }
-
-  resolved(tenv: TypeEnv): Type {
-    return this;
   }
 
   public paramTypes(): Type[] {
@@ -178,28 +81,34 @@ export class Type {
   }
 
   public isOptional() {
-    return this.value !== undefined
+    return this.getValue() !== undefined
   }
 
   public is(name: string) {
-    return this.tid === name
+    return this.resolved().tid === name
   }
 
   public isBoolType() {
-    return this.tid === 'boolean'
+    return this.is('boolean');
   }
 
   public isNumberType() {
-    return this.tid === 'number'
+    return this.is('number')
   }
 
   public isStringType() {
-    return this.tid === 'string'
+    return this.is('string')
   }
 
   public isFuncType() {
-    return this instanceof FuncType
+    return this.resolved() instanceof FuncType
   }
+
+  public isUntypedType() {
+    return false;
+  }
+
+  /* static */
 
   static memoType(key: string, makeType: () => Type) {
     if (key.indexOf('#') === -1) {
@@ -212,12 +121,12 @@ export class Type {
     return makeType();
   }
 
-  public static newVarType(varname: string, id: number) {
-    return new VarType(varname, id);
-  }
+  // public static newVarType(varname: string, id: number) {
+  //   return new VarType(varname, id);
+  // }
 
   public static newFuncType(paramType: Type, returnType: Type) {
-    const key = `${paramType.tid}->${returnType.tid}`;
+    const key = `${paramType}->${returnType}`;
     return Type.memoType(key, () => new FuncType(key, paramType, returnType));
   }
 
@@ -248,7 +157,7 @@ export class Type {
   public static of(s: string) {
     const ty = TypeMemo[normalTypeName(s)];
     if(!ty) {
-      console.log(`FIXME Type.of('${s}') is undefined`);
+      //console.log(`FIXME Type.of('${s}') is undefined`);
       return TypeMemo['any'];
     }
     return ty;
@@ -270,39 +179,27 @@ class VoidType extends BaseType {
   constructor() {
     super('()');
   }
-  matchEach(tenv: TypeEnv, ty: Type): Type | null {
-    return ty;
+  
+  matchEach(ty: Type): Type | null {
+    return this;
   }
+  
   public paramTypes(): Type[] {
     return [];
   }
+
 }
 
 class AnyType extends BaseType {
   constructor() {
     super('any');
   }
-  matchEach(tenv: TypeEnv, ty: Type): Type | null {
+  matchEach(ty: Type): Type | null {
     return ty instanceof VoidType ? null : ty;
   }
-}
 
-export class VarType extends Type {
-  serial: number;
-
-  constructor(varname: string, serial: number) {
-    super((serial >= AlphaSerial) ? '$' + varname : `${varname}#${serial}`, undefined);
-    this.serial = serial;
-  }
-
-  matchEach(tenv: TypeEnv, ty: Type): Type | null {
-    const dref = tenv.getDRef(this.tid, this);
-    return dref.match(tenv, ty);
-  }
-
-  resolved(tenv: TypeEnv) {
-    const dref = tenv.getDRef(this.tid, this);
-    return dref.resolved ? dref.resolved : this;
+  public isUntypedType() {
+    return true;
   }
 
 }
@@ -333,13 +230,13 @@ class FuncType extends Type {
     return this.paramType.getParameterType(index);
   }
 
-  matchEach(tenv: TypeEnv, ty: Type): Type | null {
+  matchEach(ty: Type): Type | null {
     if (ty instanceof FuncType) {
-      const p = this.paramType.match(tenv, ty.paramType);
+      const p = this.paramType.match(ty.paramType);
       if (p === null) {
         return p;
       }
-      const r = this.returnType.match(tenv, ty.returnType);
+      const r = this.returnType.match(ty.returnType);
       if (r === null) {
         return r;
       }
@@ -348,10 +245,10 @@ class FuncType extends Type {
     return null;
   }
 
-  resolved(tenv: TypeEnv): Type {
+  resolved(): Type {
     if (this.containsResolvingType()) {
-      const p = this.paramType.resolved(tenv);
-      const r = this.returnType.resolved(tenv);
+      const p = this.paramType.resolved();
+      const r = this.returnType.resolved();
       return Type.newFuncType(p, r);
     }
     return this;
@@ -378,11 +275,11 @@ class TupleType extends Type {
     return this.types[index];
   }
 
-  matchEach(tenv: TypeEnv, ty: Type): Type | null {
+  matchEach(ty: Type): Type | null {
     if (ty instanceof TupleType && this.getParameterSize() === ty.getParameterSize()) {
       var ts = []
       for (var i = 0; i < this.getParameterSize(); i++) {
-        var res = this.getParameterType(i).match(tenv, ty.getParameterType(i));
+        var res = this.getParameterType(i).match(ty.getParameterType(i));
         if (res === null) {
           return res;
         }
@@ -397,9 +294,9 @@ class TupleType extends Type {
     return Type.newTupleType(...ts);
   }
 
-  resolved(tenv: TypeEnv): Type {
+  resolved(): Type {
     if (this.containsResolvingType()) {
-      const ts = this.types.map(t => t.resolved(tenv));
+      const ts = this.types.map(t => t.resolved());
       return Type.newTupleType(...ts);
     }
     return this;
@@ -414,9 +311,9 @@ class ParamType extends TupleType {
     this.base = base
   }
 
-  matchEach(tenv: TypeEnv, ty: Type): Type | null {
+  matchEach(ty: Type): Type | null {
     if (ty instanceof ParamType && this.base === ty.base) {
-      return super.matchEach(tenv, ty);
+      return super.matchEach(ty);
     }
     return null;
   }
@@ -425,9 +322,9 @@ class ParamType extends TupleType {
     return Type.newParamType(this.base, ...ts);
   }
 
-  resolved(tenv: TypeEnv): Type {
+  resolved(): Type {
     if (this.containsResolvingType()) {
-      const ts = this.types.map(t => t.resolved(tenv));
+      const ts = this.types.map(t => t.resolved());
       return Type.newParamType(this.base, ...ts);
     }
     return this;
@@ -440,11 +337,11 @@ class UnionType extends TupleType {
     super(key, types);
   }
 
-  matchEach(tenv: TypeEnv, ty: Type): Type | null {
+  matchEach(ty: Type): Type | null {
     if (ty instanceof UnionType) {
       const ts: Type[] = []
       for (const t of ty.types) {
-        const res = UnionType.matchUnion(tenv, this.types, t);
+        const res = UnionType.matchUnion(this.types, t);
         if (res !== null) {
           UnionType.appendUnion(ts, res);
         }
@@ -454,12 +351,12 @@ class UnionType extends TupleType {
       }
       return Type.newUnionType(...ts);
     }
-    return UnionType.matchUnion(tenv, this.types, ty);
+    return UnionType.matchUnion(this.types, ty);
   }
 
-  resolved(tenv: TypeEnv): Type {
+  resolved(): Type {
     if (this.containsResolvingType()) {
-      const ts = this.types.map(t => t.resolved(tenv));
+      const ts = this.types.map(t => t.resolved());
       return Type.newUnionType(...ts);
     }
     return this;
@@ -481,9 +378,9 @@ class UnionType extends TupleType {
     }
   }
 
-  static matchUnion(tenv: TypeEnv, ts: Type[], ty: Type) {
+  static matchUnion(ts: Type[], ty: Type) {
     for (const t of ts) {
-      const res = t.match(tenv, ty);
+      const res = t.match(ty);
       if (res !== null) {
         return res;
       }
@@ -492,8 +389,193 @@ class UnionType extends TupleType {
   }
 }
 
+export interface TypeEnvSolver {
+  getTypeEnv(): TypeEnv;
+}
+
+export class TypeEnv implements TypeEnvSolver {
+  parent: TypeEnv | null;
+  env: { [key: string]: TypeRef } = {};
+  serial = 0;
+
+  constructor(parent: TypeEnv | null = null) {
+    this.parent = parent;
+    if (parent) {
+      this.serial = parent.serial;
+    }
+  }
+
+  pop() : TypeEnv {
+    this.parent!.serial = this.serial
+    return this.parent!;
+  }
+  
+  getTypeEnv(): TypeEnv {
+    return this
+  }
+
+  public newVarType(name: string, env?: TypeEnvSolver) {
+    this.serial += 1;
+    return new VarType(env === undefined ? this : env, `${name}#${this.serial}`, this.serial);
+  }
+
+  setTypeRef(key: string, tref: TypeRef) {
+    this.env[key] = tref;
+  }
+
+  getTypeRef(key: string, parent: VarType): TypeRef {
+    var tref = this.env[key];
+    if (!tref) {
+      if(this.serial < AlphaSerial) {
+        this.serial += 1;
+      }
+      tref = new TypeRef(parent, this.serial);
+      this.env[key] = tref;
+    }
+    return tref;
+  }
+}
+
+class TypeRef {
+  serial: number
+  key: VarType;
+  resolved: Type | null = null;
+  
+  constructor(key: VarType, serial: number) {
+    this.serial = serial;
+    this.key = key;
+    this.resolved = null;
+  }
+
+  match(ty: Type) : Type | null{
+    if (ty instanceof VarType) {
+      const r1 = this.key.getTypeRef()
+      const r2 = ty.getTypeRef()
+      const u = TypeRef.merge(r1, r2);
+      if(u) {
+        this.key.setTypeRef(u);
+        ty.setTypeRef(u);
+        return this.key.resolved();
+      }
+      return null;
+    }
+    if (this.resolved === null) {
+      this.resolved = ty;
+      return ty;
+    }
+    const matched = this.resolved.match(ty);
+    if (matched !== null) {
+      this.resolved = ty;
+    }
+    return null;
+  }
+
+  static merge(r1: TypeRef, r2: TypeRef) {
+    if(r1 === r2) {
+      return r1;
+    }
+    if (r1.resolved === null && r2.resolved === null) {
+      return r1.serial < r2.serial ? r1 : r2;
+    }
+    if (r1.resolved !== null && r2.resolved === null) {
+      r2.resolved = r1.resolved;
+      return r1.serial < r2.serial ? r1 : r2;
+    }
+    if(r1.resolved === null && r2.resolved !== null) {
+      r1.resolved = r2.resolved;
+      return r1.serial < r2.serial ? r1 : r2;
+    }
+    const matched = r1.resolved?.match(r2.resolved!);
+    if(matched) {
+      r1.resolved = matched;
+      r2.resolved = matched;
+      return r1.serial < r2.serial ? r1 : r2;
+    }
+    return null;
+  }
+
+}
+
+class VarType extends Type {
+  tenvSolver: TypeEnvSolver;
+  tenv:TypeEnv;
+
+  constructor(tenvSolver: TypeEnvSolver, varname: string, serial: number) {
+    super(varname, undefined);
+    this.tenvSolver = tenvSolver;
+    this.tenv = tenvSolver.getTypeEnv();
+    this.tenv.setTypeRef(this.tid, new TypeRef(this, serial))
+  }
+
+  private getTypeEnv() {
+    if (this.tid.startsWith('$')) {
+      return this.tenvSolver.getTypeEnv();
+    }
+    else {
+      return this.tenv;
+    }
+  }
+
+  getTypeRef(): TypeRef {
+    var tenv = this.getTypeEnv();
+    return tenv.getTypeRef(this.tid, this);
+  }
+
+  setTypeRef(u: TypeRef) {
+    const tenv = this.getTypeEnv();
+    tenv.setTypeRef(this.tid, u);
+  }
+
+  matchEach(ty: Type): Type | null {
+    const tref = this.getTypeRef();
+    return tref.match(ty.resolved());
+  }
+
+
+  resolved() {
+    const tref = this.getTypeRef();
+    return tref.resolved ? tref.resolved : this;
+  }
+
+  public toString(): string {
+    const ty = this.resolved();
+    if(ty === this) {
+      return this.tid.startsWith('$') ? this.tid : 'any';
+    }
+    return ty.toString()
+  }
+
+  public paramTypes(): Type[] {
+    return this.resolved().paramTypes();
+  }
+
+  public getReturnType(): Type {
+    return this.resolved().getReturnType();
+  }
+
+  public getParameterSize() : number {
+    return this.resolved().getParameterSize();
+  }
+
+  public getParameterType(index: number): Type {
+    return this.resolved().getParameterType(index);
+  }
+
+  public getValue() : any {
+    return this.resolved().getValue();
+  }
+
+  public isUntypedType(): any {
+    const ty = this.resolved()
+    if(ty !== this) {
+      return ty.isUntypedType()
+    }
+    return true;
+  }
+}
 
 const AlphaSerial = (Number.MAX_SAFE_INTEGER - 26);
+const AlphaTypeEnv = new TypeEnv()
 
 const TypeMemo: { [key: string]: Type } = {
   'any': new AnyType(),
@@ -501,8 +583,9 @@ const TypeMemo: { [key: string]: Type } = {
   'boolean': new BaseType('boolean'),
   'number': new BaseType('number'),
   'string': new BaseType('string'),
-  'a': new VarType('a', AlphaSerial),
-  'b': new VarType('b', AlphaSerial + 1),
+  'a': new VarType(AlphaTypeEnv, '$a', AlphaSerial),
+  'b': new VarType(AlphaTypeEnv, '$b', AlphaSerial + 1),
+  'c': new VarType(AlphaTypeEnv, '$c', AlphaSerial + 2),
 }
 
 class TypeVisitor {

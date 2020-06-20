@@ -1,5 +1,5 @@
 import { ParseTree } from './parser';
-import { Type, TypeEnv, Symbol } from './types';
+import { Type, TypeEnv, TypeEnvSolver, Symbol } from './types';
 import { Code, Language, Module } from './modules';
 import { stringfy, isInfix } from './utils';
 
@@ -224,13 +224,12 @@ export class FunctionContext {
 
 }
 
-export class Environment extends CodeWriter {
+export class Environment extends CodeWriter implements TypeEnvSolver {
   parent: Environment | undefined
   env: { [key: string]: Symbol } = {}
   funcBase: FunctionContext
 
   typeEnv: TypeEnv
-  varTypeId = 0
 
   constructor(parent?: Environment) {
     super(parent)
@@ -238,12 +237,10 @@ export class Environment extends CodeWriter {
     if (parent) {
       this.funcBase = parent.funcBase
       this.typeEnv = parent.typeEnv
-      this.varTypeId = parent.varTypeId
     }
     else {
       this.funcBase = new FunctionContext('main', [], AnyType, true)
       this.typeEnv = new TypeEnv()
-      this.varTypeId = 0
     }
   }
 
@@ -252,9 +249,7 @@ export class Environment extends CodeWriter {
     super.init()
     this.funcBase = new FunctionContext('main', [], AnyType, true)
     this.typeEnv = new TypeEnv()
-    this.varTypeId = 0
   }
-
 
   protected getRoot() :Environment {
     return this.parent === undefined ? this : this.parent.getRoot()
@@ -352,15 +347,30 @@ export class Environment extends CodeWriter {
     return this.funcBase.loopLevel > 0
   }
 
-  protected newTypeEnv() {
+  /* typeEnv */
+
+  getTypeEnv(): TypeEnv {
     return this.typeEnv;
   }
 
-  protected newVarType(pt: ParseTree) {
-    return Type.newVarType(pt.getToken(), this.varTypeId++);
+  protected pushTypeEnv(funcType: Type) {
+    if(funcType.tid.indexOf('$') >= 0) {
+      console.log(`DEBUG: ${funcType}`)
+      this.typeEnv = new TypeEnv(this.typeEnv);
+    }
   }
 
-  public typeCheck(pt: ParseTree, pat?: Type, tenv?: TypeEnv, options?: any): [string[], Type] {
+  protected popTypeEnv(funcType: Type) {
+    if (funcType.tid.indexOf('$') >= 0) {
+      this.typeEnv = this.typeEnv.pop();
+    }
+  }
+
+  protected newVarType(pt: ParseTree) : Type {
+    return this.typeEnv.newVarType(pt.getToken(), this);
+  }
+
+  public typeCheck(pt: ParseTree, pat?: Type, options?: any): [string[], Type] {
     if (pat && pat.isBoolType()) {
       // if (t.tag === 'Infix' && t.tokenize('name') === '=') {
       //   this.pwarn(t, 'BadAssign');
@@ -373,8 +383,7 @@ export class Environment extends CodeWriter {
     const code = this.buffers;
     this.buffers = buffers;
     if (pat) {
-      tenv = tenv || this.typeEnv
-      const matched = pat.match(tenv, vat);
+      const matched = pat.match(vat);
       if (matched === null) {
         options = options || {}
         options.requestType = pat
@@ -383,7 +392,7 @@ export class Environment extends CodeWriter {
         console.log(`type error ${pat} ${vat} @ ${code}`)
         return [code, pat];
       }
-      return [code, matched.resolved(tenv)];
+      return [code, matched.resolved()];
     }
     return [code, vat];
   }
