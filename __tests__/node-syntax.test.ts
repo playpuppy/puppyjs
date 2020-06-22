@@ -63,7 +63,8 @@ describe('infix', () => {
     expect(tmin('1-2-3')).toMatch('(1-2)-3')
   })
   test('1*2+3', () => {
-    expect(tmin('1*2+3')).toMatch('(1*2)+3')
+    //expect(tmin('1*2+3')).toMatch('(1*2)+3')
+    expect(tmin('1*2+3')).toMatch('1*2+3')
   })
   test('1*(2+3)', () => {
     expect(tmin('1*(2+3)')).toMatch('1*(2+3)')
@@ -93,7 +94,8 @@ describe('expression', () => {
     expect(tmin('a.x')).toMatch('a.x')
   })
   test('a[0]', () => {
-    expect(tmin('a[0]')).toMatch('a[0]')
+    //expect(tmin('a[0]')).toMatch('a[0]')
+    expect(tmin('a[0]')).toMatch('a[$v.$0.pyindex(a,0,0)]')
   })
   test('sin(x)', () => {
     expect(tmin('sin(x)')).toMatch('sin(x)')

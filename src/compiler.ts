@@ -298,7 +298,7 @@ export class JSGenerator extends Environment {
   }
 
   findMethod(name: string, paramSize: number, ty = AnyType) {
-    if(!ty.is('any')) {
+    if(!ty.isUntypedType()) {
       const symbol = this.getSymbol(`${name}::${ty}@${paramSize}`)
       if(symbol) {
         return symbol;
@@ -828,11 +828,12 @@ export class JSGenerator extends Environment {
       this.perror(pt, 'OnlyInFunction')
       return VoidType
     }
-    this.funcBase.hasReturn = true
     if(pt.has('expr')) {
+      this.funcBase.hasReturnValue = true
       this.pushS('return')
       this.pushSP()
       this.pushT(pt.get('expr'), this.funcBase.returnType);
+      //console.log(`DEBUG return ${this.funcBase.returnType}`)
     }
     else {
       this.pushS('return');
@@ -915,19 +916,19 @@ export class JSGenerator extends Environment {
     }
     const funcBase = lenv.funcBase
     const key = `${name}@${funcBase.params.length}`
-    const lsymbol = funcBase.definedSymbol(this.safeName(name), Symbol.Async);
+    const lsymbol = funcBase.definedSymbol(this.safeName(name), false, Symbol.Async);
     lenv.setSymbol(name, lsymbol)
     lenv.setSymbol(key, lsymbol)
     lenv.visit(this.makeBlock(pt.get('body'), pt))
-    const defun = funcBase.definedSymbol(this.safeName(name))
-    //this.defineSymbol(name, defun, pt)
+    const defun = funcBase.definedSymbol(this.safeName(name), true)
+    this.defineSymbol(name, defun, pt)
     this.defineSymbol(key, defun, pt)
     this.pushLet(defun)
     this.pushFunction(lenv)
     if (this.hasSymbol('yield-async') && this.hasSymbol('$')) {
       this.pushSyncFunc(name, defun.code, lenv)
     }
-    //console.log(`DEFINED ${name} :: ${defun.type}`)
+    console.log(`DEFINED ${name} :: ${defun.type}`)
     return VoidType
   }
 

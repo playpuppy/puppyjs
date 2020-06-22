@@ -2,7 +2,7 @@ import { Module, APIs, EntryPoint } from '../modules'
 import { Stopify } from '../stopify'
 
 const DefineAsync: APIs = [
-  ['$', 'void', `${EntryPoint}['{0}']`],
+  ['$', 'void', `${EntryPoint}.vars['{0}']`],
   ['yield-async', 'void', 'yield'],
   ['check-sync', 'any', '$$sync'],
 ]

@@ -31,8 +31,7 @@ return function (${EntryPoint}) {
   catch (e) {
     context.main = source
     context.e = e
-    console.log(main);
-    console.log(e);
+    throw e;
   }
 }
 

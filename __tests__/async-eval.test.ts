@@ -7,10 +7,6 @@ const tc = (s: string) => {
   const c = puppyjs.compile(s)
   return c.compiled
 }
-const tmin = (s: string) => {
-  const c = puppyjs.compile(s)
-  return c.compiled.replace(/\s/g, '')
-}
 
 describe('literal', () => {
   test('True', () => {

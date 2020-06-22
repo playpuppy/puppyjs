@@ -186,9 +186,9 @@ export class FunctionContext {
   params: string[] = []
   paramTypes: Type[] = []
   locals: string[] = []
-  hasReturn = false
   foundAsync = false
   returnType: Type
+  hasReturnValue = false
   // type: Type
   loopLevel = 0
   constructor(name: string, paramTypes: Type[] = [], returnType: Type, isGlobalMain = false) {
@@ -206,13 +206,13 @@ export class FunctionContext {
 
   definedFuncType() {
     const ptype = Type.newTupleType(...this.paramTypes)
-    if (!this.hasReturn) {
-      this.returnType = Type.of('void')
-    }
     return Type.newFuncType(ptype, this.returnType)
   }
 
-  definedSymbol(name: string, options?: any) {
+  definedSymbol(name: string, checkVoid: boolean, options?: any) {
+    if (checkVoid && !this.hasReturnValue) {
+      this.returnType = Type.of('void')
+    }
     if(options) {
       return new Symbol(this.definedFuncType(), name, options)
     }
@@ -385,13 +385,16 @@ export class Environment extends CodeWriter implements TypeEnvSolver {
     if (pat) {
       const matched = pat.match(vat);
       if (matched === null) {
-        options = options || {}
-        options.requestType = pat
-        options.resultType = vat
-        this.perror(pt, 'TypeError', options);
-        console.log(`type error ${pat} ${vat} @ ${code}`)
+        if(!vat.isUntypedType()) {
+          options = options || {}
+          options.requestType = pat
+          options.resultType = vat
+          this.perror(pt, 'TypeError', options);
+          console.log(`type error ${pat} ${vat.tid} @ ${code}`)
+        }
         return [code, pat];
       }
+
       return [code, matched.resolved()];
     }
     return [code, vat];
