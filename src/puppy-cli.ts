@@ -135,8 +135,8 @@ type JudgeData = {
   timeOut?: number
   input: any[]
   output: any
-  elapsed: number
   status: string
+  elapsed: number
   result: any
 }
 
@@ -175,12 +175,6 @@ export class OnlineJudge {
       const stopify = new Stopify(result)
       stopify.setTimeOut(d.timeOut || 5000)
       stopify.start()
-      // stopify.start((ret) => {
-      //   d.elapsed = Date.now() - startTime
-      //   d.status = match(d.output, ret) ? 'AC' : 'WA'
-      //   d.result = ret
-      //   this.judged(cx, d)
-      // })
     }
     else {
       d.elapsed = Date.now() - startTime

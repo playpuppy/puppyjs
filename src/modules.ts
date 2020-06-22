@@ -1,6 +1,6 @@
 import { Type, Symbol } from './types'
 import { ParseTree } from './parser'
-import { EventSubscription } from './event';
+import { Events } from './event';
 import { syncExec } from './stopify';
 
 export const EntryPoint = '$v';
@@ -43,11 +43,12 @@ type Player = {
 export class Context {
   public vars: any = {}
   public players: Player[] = []
-  public events: EventSubscription
+  public events: Events
   public codemap: ParseTree[]
+  public caughtException: any
 
-  public constructor(events: EventSubscription | undefined, codemap: ParseTree[]) {
-    this.events = events || new EventSubscription()
+  public constructor(events: Events | undefined, codemap: ParseTree[]) {
+    this.events = events || new Events()
     this.codemap = codemap
   }
 
@@ -240,7 +241,7 @@ export class Code {
   public compiled: string = ''
   public main: Main | undefined = undefined
 
-  public newContext(event?: EventSubscription) {
+  public newContext(event?: Events) {
     const cx = new Context(event, this.codemap)
     for (var module of this.modules) {
       module = Object.create(module);

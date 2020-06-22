@@ -28,7 +28,7 @@ def fact(n):
   return fact(n-1)*n
 `
     expect(tmin(c)).toMatch(`['fact']=function*(n)`)
-    expect(tmin(c)).toMatch(`return(yield()=>$v['fact'](n-1))*n`)
+    expect(tmin(c)).toMatch(`return(yield()=>$v.vars['fact'](n-1))*n`)
   })
   test('add', () => {
     const c = `
@@ -59,7 +59,7 @@ def fuse():
 
 `
     expect(tmin(c)).toMatch(`['fuse']=function*(){`)
-    expect(tmin(c)).toMatch(`(yield()=>$v['fwhile']())`)
+    expect(tmin(c)).toMatch(`(yield()=>$v.vars['fwhile']())`)
   })
 
   test('after fuse', () => {
@@ -71,7 +71,7 @@ def fwhile():
   while a < b:
     a+=1
 `
-    expect(tmin(c)).toMatch(`v['fuse']=()=>{`)
+    expect(tmin(c)).toMatch(`v.vars['fuse']=()=>{`)
     expect(tmin(c)).toMatch(`fwhile()`)
     expect(tmin(c)).toMatch(`varfwhile=()=>`)
   })

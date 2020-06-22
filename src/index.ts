@@ -5,7 +5,7 @@ import { Language, APIs, Module, Code, Context } from "./modules"
 import { site_package } from "./lib/package"
 import { Generator, Environment as Compiler } from "./generator"
 import { JSGenerator } from "./compiler"
-import { EventSubscription, EventCallback } from './event'
+import { Events, EventCallback } from './event'
 import { Stopify } from "./stopify"
 
 export { Language, Module, Parser, Compiler, Code, ParseTree, Context, APIs}
@@ -54,17 +54,54 @@ export class TransCompiler {
   }
 }
 
+export type JudgeData = {
+  index: number
+  name: string
+  input: any[]
+  output: any
+  timeOut?: number
+  status?: string
+  result?: any
+  elapsedTime?: number
+  log?: any
+}
+
+const match = (a: any, b: any) => {
+  if (a === b) {
+    return true
+  }
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length === b.length) {
+      for (var i = 0; i < a.length; i++) {
+        if (!match(a[i], b[i])) {
+          return false
+        }
+      }
+      return true
+    }
+  }
+  if (typeof a === 'object' && typeof b === 'object') {
+    for (const key of Object.keys(a)) {
+      if (!match(a[key], b[key])) {
+        return false
+      }
+    }
+    return true
+  }
+  return false
+}
+
 export class PuppyPlayer {
   tc: TransCompiler
   code: Code | undefined = undefined
   context: Context | undefined;
-  events: EventSubscription;
+  events: Events;
 
   public constructor() {
     const tc = new TransCompiler()
     tc.install('python3', '')
     this.tc = tc
-    this.events = new EventSubscription()
+    this.events = new Events()
   }
 
   public addEventListener(key: string, callback: EventCallback) {
@@ -134,5 +171,72 @@ export class PuppyPlayer {
     //   Context.get(this.context, 'render').resize(width, height)
     // }
   }
-  
+
+  // judge
+
+  public judge(d: JudgeData) {
+    if (!this.code) {
+      console.log('load first')
+      return;
+    }
+    if(this.events.hasRule('judge-ending')) {
+      this.events.addEventListener('judge-ending', (e)=>{
+        const d = e.ref;
+        d.result = e.result;
+        d.elapsedTime = e.elapsedTime;
+        d.status = match(d.output, d.result) ? 'AC' : 'WA';
+        this.events.dispatch('puppy-judged', d);
+      })
+    }
+    if (this.events.hasRule('judge-timeout')) {
+      this.events.addEventListener('judge-timeout', (e) => {
+        const d = e.ref;
+        d.elapsedTime = e.elapsedTime;
+        d.status = 'TLE';
+        this.events.dispatch('puppy-judged', d);
+      })
+    }
+    if (this.events.hasRule('judge-catching')) {
+      this.events.addEventListener('judge-catching', (e) => {
+        const d = e.ref;
+        d.log = e.caughtException;
+        d.status = 'RE';
+        this.events.dispatch('puppy-judged', d);
+      })
+    }
+    this.context = this.code.newContext(this.events)
+    if (this.context.caughtException) {
+      d.status = 'CE';
+      d.log = this.context.caughtException;
+      this.events.dispatch('puppy-judged', d)
+      return;
+    }
+    if (this.context.vars[d.name]) {
+      d.status = 'NE';
+      this.events.dispatch('puppy-judged', d);
+      return;
+    }
+    try {
+      const startTime = Date.now();
+      var result = this.context.vars[d.name](...d.input);
+      if (result && result.next) {
+        const stopify = new Stopify(result, this.events, d);
+        stopify.setTimeOut(d.timeOut || 5000)
+        stopify.setNamespace('judge')
+        stopify.start()
+      }
+      else {
+        d.elapsedTime = Date.now() - startTime
+        d.result = result
+        d.status = match(d.output, d.result) ? 'AC' : 'WA'
+        this.events.dispatch('puppy-judged', d);
+      }
+    }
+    catch(e) {
+      d.status = 'RE';
+      d.log = e;
+      this.events.dispatch('puppy-judged', d);
+    }
+  }
 }
+

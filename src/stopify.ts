@@ -1,4 +1,4 @@
-import { EventSubscription } from './event'
+import { Events } from './event'
 
 const HelloWorld = function*(vars: any) {
   console.log('Hello')
@@ -8,21 +8,22 @@ const HelloWorld = function*(vars: any) {
 }
 
 export class Stopify {
-
   private runtimeStack: IterableIterator<any>[];
   private cps: any = null
   private retval: any = undefined
   private paused = false
   private autoPause = false
   private timeScale = 1.0
+  private startTime = 0
   private timeOut = 0
-  private events: EventSubscription | undefined
-  private options: any
+  private events: Events | undefined
+  private ns = 'stopify';
+  private ref: any;
 
-  public constructor(runtime: IterableIterator<any>, events?: EventSubscription, options?: any) {
+  public constructor(runtime: IterableIterator<any>, events?: Events, ref?: any) {
     this.runtimeStack = [runtime]
     this.events = events
-    this.options = options
+    this.ref = ref
   }
 
   public syncExec() {
@@ -42,6 +43,10 @@ export class Stopify {
       }
     }
     return this.retval;
+  }
+
+  public setNamespace(ns:string) {
+    this.ns = ns
   }
 
   public setAutoPause(autoPause: boolean) {
@@ -66,14 +71,20 @@ export class Stopify {
     if(this.timeOut > 100) {
       setTimeout(() => { this.timeOut = -1 }, this.timeOut);
     }
+    this.startTime = Date.now()
     this.stepExec();
   }
 
   stepExec() {
     if (this.runtimeStack.length === 0) {
-      if(this.events) {
-        this.events.dispatch('ending', { result: this.retval, options: this.options})
-      }
+      // if(this.events) {
+      //   this.events.dispatch('stopify-ending', { 
+      //     elapsedTime: Date.now() - this.startTime,
+      //     result: this.retval, 
+      //     ref: this.ref
+      //   })
+      // }
+      console.log(`FIXME @Stopify.stepExec()`)
       return
     }
     if (this.paused === true) {
@@ -82,43 +93,60 @@ export class Stopify {
     }
     const runtime = this.runtimeStack[this.runtimeStack.length - 1];
     var time = 0;
-    var res = runtime.next(this.retval);
-    if (this.autoPause) {
-      this.pause();
-    }
-    // console.log(res)
-    if (res.done) {
-      this.retval = res.value;
-      this.runtimeStack.pop(); // FIXME
-      //console.log(`returing ${this.retval}`);
-      if (this.runtimeStack.length === 0) {
-        if (this.events) {
-          this.events.dispatch('ending', { result: this.retval, options: this.options })
-        }
-        return
+    try {
+      var res = runtime.next(this.retval);
+      if (this.autoPause) {
+        this.pause();
       }
-    }
-    else {
-      this.retval = undefined;
-      //console.log(`yielding ${v}`);
-      if (typeof res.value === 'number') {
-        time = res.value % 1000;
-        if (time !== 0 && this.events) {
-          this.events.dispatch('trackLine', res.value / 1000)
+      // console.log(res)
+      if (res.done) {
+        this.retval = res.value;
+        this.runtimeStack.pop(); // FIXME
+        //console.log(`returing ${this.retval}`);
+        if (this.runtimeStack.length === 0) {
+          if (this.events) {
+            this.events.dispatch(`${this.ns}-ending`, {
+              elapsedTime: Date.now() - this.startTime,
+              result: this.retval,
+              ref: this.ref
+            })
+          }
+          return
         }
       }
       else {
-        var newRuntime = res.value;
-        this.runtimeStack.push(newRuntime());
+        this.retval = undefined;
+        //console.log(`yielding ${v}`);
+        if (typeof res.value === 'number') {
+          time = res.value % 1000;
+          if (time !== 0 && this.events) {
+            this.events.dispatch(`${this.ns}-line`, res.value / 1000)
+          }
+        }
+        else {
+          var newRuntime = res.value;
+          this.runtimeStack.push(newRuntime());
+        }
+      }
+      if (this.timeOut !== -1) {
+        //console.log(`time ${time}`)
+        this.cps = setTimeout(() => (this.stepExec()), (time * this.timeScale) | 0);
+      }
+      else {
+        if (this.events) {
+          this.events.dispatch(`${this.ns}-timeout`, {
+            elapsedTime: Date.now() - this.startTime,
+            ref: this.ref
+          })
+        }
       }
     }
-    if(this.timeOut !== -1) {
-      //console.log(`time ${time}`)
-      this.cps = setTimeout(() => (this.stepExec()), time * this.timeScale);
-    }
-    else {
-      if (this.events) {
-        this.events.dispatch('timeOut', { options: this.options })
+    catch(e) {
+      if(this.events) {
+        this.events.dispatch(`${this.ns}-catching`, {
+          caughtException: e,
+          ref: this.ref
+        })
       }
     }
   }
